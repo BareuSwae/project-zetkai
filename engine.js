@@ -13,11 +13,11 @@ Object.assign(BS,{$,$$,clamp,esc,LS,COARSE,pick});
 /* ---------- constants ---------- */
 BS.DIFFS=[{k:'easy',n:'EASY',c:'#1fb8a6',t:'#fff'},{k:'normal',n:'NORMAL',c:'#f5c518',t:'#2a2200'},{k:'hard',n:'HARD',c:'#9b5de5',t:'#fff'}];
 BS.diffInfo=k=>BS.DIFFS.find(d=>d.k===k)||BS.DIFFS[1];
-BS.VERSION='v28';
-BS.LINES={S:['캬ㅏㅏㅏ 이게 나야 이게 나야!!','봤습니까 여러분들? 저 리듬게임 잘해요~'],A:['솔직히 이정도면 잘한거죠 인정?','뭐 한두개쯤은 틀릴 수 있는거 아니에요?'],B:['뭐...그럴 수 있죠ㅋㅋ','아 곡이 어려운거임~'],C:['뭐...D는 아니지 않습니까?','아ㅋㅋ오케이 완벽히 깨달았다ㅋㅋ'],D:['사실 리트 하려고 했는데 D랭크는 뭔 말할지 궁금해서 일부러 받은거임~!!']};
+BS.VERSION='v35';
+BS.LINES={S:['캬ㅏㅏㅏ 이게 나야 이게 나야!!','봤습니까 여러분들? 저 리듬게임 잘해요~'],A:['솔직히 이정도면 잘한거죠 인정?','뭐 한두개쯤은 틀릴 수 있는거 아니에요?'],B:['뭐...그럴 수 있죠ㅋㅋ','아 곡이 어려운거임~'],C:['뭐...D는 아니지 않습니까?','ㅋㅋㅋㅋㅋㅋㅋ오케이!! 완벽히 깨달았다!'],D:['사실 D랭크는 뭔 말할지 궁금해서 일부러 받은거임~!!','뭐하는거야~ 마짱뜰래~!!']};
 BS.RANKS=[['C',70],['B',80],['A',90],['S',95]];
 /* achievements (names/descriptions can be changed in the developer tool) */
-BS.ACH_DEF=[['firstClear','사람이 된 달팽이','처음으로 곡을 클리어했습니다'],['firstFC','겜잘스','처음으로 풀 콤보를 달성했습니다'],['firstAP','마젯 우승~','처음으로 올 퍼펙트를 달성했습니다'],['firstOver','헛소리 안하기 1일차','처음으로 COMBO OVER를 겪었습니다'],['firstScout','너는 무슨 유입이니?','처음으로 스카우트했습니다'],['fullTeam','다섯이 모이면...','라이브 멤버 5명을 배치해 라이브를 진행했습니다'],['allChars','달팽이 점액짜내기 공장','모든 캐릭터를 모았습니다'],['allComics','집에서만 보세요','모든 로딩 만화를 수집했습니다'],['allS','절대 마젯을 이기려 들지 마','모든 곡에서 S 랭크를 받았습니다'],['allUnlock','플레이 해주셔서 감사합니다!','모든 만화와 캐릭터를 해금했습니다']];
+BS.ACH_DEF=[['firstClear','사람이 된 달팽이','처음으로 곡을 클리어했습니다'],['firstFC','겜잘스','처음으로 풀 콤보를 달성했습니다'],['firstAP','마젯 우승~','처음으로 올 퍼펙트를 달성했습니다'],['firstOver','쟈코','처음으로 COMBO OVER를 겪었습니다'],['firstScout','너는 무슨 유입이니?','처음으로 스카우트했습니다'],['fullTeam','다섯이 모이면...','라이브 멤버 5명을 배치해 라이브를 진행했습니다'],['allChars','달팽이 점액짜내기 공장','모든 캐릭터를 모았습니다'],['allComics','집에서만 보세요','모든 로딩 만화를 수집했습니다'],['allS','절대 마젯을 이기려 들지 마','모든 곡에서 S 랭크를 받았습니다'],['allUnlock','플레이 해주셔서 감사합니다!','모든 만화와 캐릭터를 해금했습니다']];
 BS.hardest=s=>{let h=null;for(const d of BS.DIFFS)if(s.charts&&s.charts[d.k]&&s.charts[d.k].notes.length)h=d.k;return h};
 BS.rankOf=acc=>acc>=95?'S':acc>=90?'A':acc>=80?'B':acc>=70?'C':'D';
 BS.gaugeMarks=()=>BS.RANKS.map(([r,v])=>`<em style="left:${v}%">${r}</em>`).join('');
@@ -34,7 +34,7 @@ $('#bs-modal').addEventListener('pointerdown',e=>{if(e.target.id==='bs-modal')BS
 BS.confirm=(msg,ok='확인')=>new Promise(res=>{BS.modal(`<p style="margin:0">${esc(msg)}</p><div class="mbtns"><button class="ghost" data-r="0">취소</button><button class="pri" data-r="1">${esc(ok)}</button></div>`);$('#bs-mbox').onclick=e=>{const b=e.target.closest('[data-r]');if(b){BS.closeModal();res(b.dataset.r==='1')}}});
 
 /* ---------- settings ---------- */
-const DEF={keys:['KeyD','KeyF','KeyJ','KeyK'],speed:6,offset:0,laneOp:.6,bgDim:.3,vol:.6,musicVol:.6,hitSound:true,metro:true};
+const DEF={keys:['KeyD','KeyF','KeyJ','KeyK'],speed:6,offset:0,laneOp:.6,bgDim:.3,vol:.6,musicVol:.6,hitSound:true,metro:true,jako:false};
 const SET=BS.SET=Object.assign({},DEF,LS.get('bs_settings',{}));
 BS.musicLevel=()=>Math.min(1,SET.musicVol*.5);
 const saveSet=()=>{LS.set('bs_settings',SET);try{BS.P.setVol(BS.musicLevel())}catch(e){}dispatchEvent(new Event('bs-settings'))};
@@ -54,6 +54,8 @@ BS.openSettings=()=>{const pct=v=>Math.round(v*100)+'%';const m=BS.modal(`<h3>�
  <label class="fld">레인 진하기<input type="range" id="sLane" min="0" max="1" step="0.05" value="${SET.laneOp}"></label>
  <label class="fld">배경 영상 어둡게<input type="range" id="sDim" min="0" max="0.9" step="0.05" value="${SET.bgDim}"></label>
  <label class="chk"><input type="checkbox" id="sMet" ${SET.metro?'checked':''}> 음악이 없는 곡은 메트로놈 재생</label>
+ <label class="chk"><input type="checkbox" id="sJako" ${SET.jako?'checked':''}> 쟈코 모드</label>
+ <p class="sub" style="margin:-6px 0 0 30px">켜면 라이프가 전부 떨어져도 COMBO OVER(게임 오버) 없이 곡을 끝까지 플레이합니다. 라이프 게이지는 0에 머물고, 랭크·기록·티켓은 평소처럼 받습니다.</p>
  ${BS.settingsExtra?BS.settingsExtra.html:''}
  <div class="mbtns"><button class="ghost" id="sReset">기본값</button><button class="pri" id="sClose">닫기</button></div></div></div>`,'wide');
  AU.init();settingsPreview($('#sPrev'));
@@ -67,6 +69,7 @@ BS.openSettings=()=>{const pct=v=>Math.round(v*100)+'%';const m=BS.modal(`<h3>�
  $('#sDim').oninput=e=>{SET.bgDim=+e.target.value;saveSet()};
  $('#sHit').onchange=e=>{SET.hitSound=e.target.checked;saveSet()};
  $('#sMet').onchange=e=>{SET.metro=e.target.checked;saveSet()};
+ $('#sJako').onchange=e=>{SET.jako=e.target.checked;saveSet()};
  $('#sReset').onclick=()=>{Object.assign(SET,JSON.parse(JSON.stringify(DEF)));saveSet();BS.openSettings()};
  $('#sClose').onclick=BS.closeModal;if(BS.settingsExtra&&BS.settingsExtra.bind)BS.settingsExtra.bind(m)};
 addEventListener('keydown',e=>{if(bindIdx===null){if(e.code==='Escape'&&BS.modalOpen()){e.stopImmediatePropagation();BS.closeModal()}return}e.preventDefault();e.stopImmediatePropagation();if(e.code!=='Escape'){const o=SET.keys.indexOf(e.code);if(o>=0&&o!==bindIdx)SET.keys[o]=SET.keys[bindIdx];SET.keys[bindIdx]=e.code;saveSet()}bindIdx=null;BS.openSettings()},true);
@@ -211,16 +214,21 @@ const Stage=BS.Stage={
  html:'<div class="platform"><div class="glow"></div><div class="top"></div><div class="lip"></div><div class="stage"></div></div>',
  build(el,song){el._song=song;el._st=song.chars.map(()=>({h0:-1e9,amp:0,sh:-1e9,fl:-1e9,sd:1}));el.innerHTML='';song.chars.forEach(c=>{const d=document.createElement('div');d.className='ch';d.style.setProperty('--sz',(+c.size||100)/100);const im=document.createElement('img');im.alt='';im.draggable=false;d.appendChild(im);el.appendChild(d)});Stage.size(el)},
  size(el){const s=el._song;if(!s)return;const n=Math.max(1,s.chars.length),w=el.clientWidth||300,h=el.clientHeight||150;el.style.setProperty('--cw',Math.min(w*.9/n,h*.8,280)+'px')},
- // which stage characters a lane belongs to: 1 → F·J, 2 → DF|JK, 3 → D|FJ|K, 4 → one each, 5+ → spread, centre takes F and J
- owners(n,l){if(n<=0)return[];if(n===1)return l===1||l===2?[0]:[];if(n===2)return[l<2?0:1];if(n===3)return[l===0?0:l===3?2:1];if(n===4)return[l];
+ // which stage characters a lane belongs to: 1 → all lanes, 2 → DF|JK, 3 → D|FJ|K, 4 → one each, 5+ → spread, centre takes F and J
+ owners(n,l){if(n<=0)return[];if(n===1)return[0];if(n===2)return[l<2?0:1];if(n===3)return[l===0?0:l===3?2:1];if(n===4)return[l];
   const m=(n-1)/2,o=[Math.round((l+.5)/4*n-.5)];if(n%2&&(l===1||l===2))o.push(m);return[...new Set(o)]},
- hop(el,amp=1,lane){const now=performance.now(),st=el._st||[],who=lane==null?null:Stage.owners(st.length,lane);st.forEach((s,i)=>{if(who&&!who.includes(i))return;const d=(who?0:i*14)+Math.random()*30;if(now+d-s.h0>120){s.h0=now+d;s.amp=amp}})},
+ // rapid hits don't restart the hop (that looked like trembling): the first hit hops, the rest are counted,
+ // and once the run of hits stops a single bigger hop follows (see tick)
+ hop(el,amp=1,lane){const now=performance.now(),st=el._st||[],who=lane==null?null:Stage.owners(st.length,lane);st.forEach((s,i)=>{if(who&&!who.includes(i))return;
+  const busy=now-s.h0<(s.amp>2?420:240)||now-(s.last||-1e9)<170;s.last=now;
+  if(!busy){s.h0=now+(who?0:i*14)+Math.random()*30;s.amp=amp;s.streak=0;s.qamp=0}else{s.streak=(s.streak||0)+1;s.qamp=Math.max(s.qamp||0,amp)}})},
  shake(el){const now=performance.now();(el._st||[]).forEach((s,i)=>{if(now-s.sh>380){s.sh=now+i*25;s.sd=Math.random()<.5?-1:1}})},
- flip(el,lane){const now=performance.now(),st=el._st||[],who=lane==null?null:Stage.owners(st.length,lane);st.forEach((s,i)=>{if(who&&!who.includes(i))return;const d=who?0:i*45;s.fl=now+d;s.h0=now+d;s.amp=3.2})},
+ flip(el,lane){const now=performance.now(),st=el._st||[],who=lane==null?null:Stage.owners(st.length,lane);st.forEach((s,i)=>{if(who&&!who.includes(i))return;const d=who?0:i*45;s.fl=now+d;s.h0=now+d;s.amp=3.2;s.streak=0;s.qamp=0;s.last=now})},
  tick(el,state,beat){const s=el._song;if(!s)return;const now=performance.now(),kids=el.children;
   // groove: a small dip on every beat of the song's BPM
   const gb=beat!=null&&beat>=0?Math.exp(-(beat%1)*7):0;
   for(let i=0;i<kids.length;i++){const c=s.chars[i],st=el._st[i];if(!c||!st)continue;const im=kids[i].firstChild;const src=BS.charSrc(c,c.__i??i,state);if(im._s!==src){im.src=src;im._s=src}
+   if(st.streak&&now-st.last>170&&now-st.h0>(st.amp>2?420:240)){st.h0=now;st.amp=Math.min(2.4,st.qamp*(1.35+.12*Math.min(st.streak,6)));st.streak=0;st.qamp=0}
    const h=kids[i].clientHeight||100;let ty=0,tx=0,sx=1,sy=1;const dt=now-st.h0,D=st.amp>2?420:240;
    if(dt>=0&&dt<D){const p=dt/D,j=(c.jump??100)/100;ty=-Math.sin(Math.PI*p)*h*.045*st.amp*j;if(p>.8){const q=Math.sin(Math.PI*(p-.8)/.2)*j;sy=1-.03*q*st.amp;sx=1+.02*q*st.amp}}
    if(gb){ty+=h*.022*gb;sy*=1-.035*gb;sx*=1+.025*gb}
@@ -280,7 +288,7 @@ const xOf=(g,lf,s)=>g.cx+(lf/4-.5)*g.hb*s;
 
 /* song: {id,title,artist,bpm,offset,notes,chars,comboTh,missMs,mediaSrc,bgSrc,coverSrc,diff,level}; opt: {from,test,lines,backLabel,onExit} */
 BS.play=async(song,opt={})=>{AU.init();P.pause();G.running=false;cancelAnimationFrame(G.raf);cancelAnimationFrame(G.rraf);stopConf();hideBubble();clearTimeout(G.ot);
- G.song=song;G.opt=opt;G.active=true;sec.classList.remove('res-on','ending','over','low','leaving','enter');$('#g-res').classList.remove('out');void sec.offsetWidth;sec.classList.add('on','enter');BS.swoosh();
+ G.song=song;G.opt=opt;G.active=true;G.jakoUsed=false;sec.classList.remove('res-on','ending','over','low','leaving','enter');$('#g-res').classList.remove('out');void sec.offsetWidth;sec.classList.add('on','enter');BS.swoosh();
  BS.mountMedia($('#g-bg'));vid.muted=false;P.setVol(BS.musicLevel());
  if(song.mediaSrc){const fresh=await P.load(song.mediaSrc);if(fresh&&P.isYt())await P.warm()}else P.unload();
  const hasV=P.hasVideo();mbox.style.display=hasV?'':'none';
@@ -323,7 +331,7 @@ const LIFE={PERFECT:6,GREAT:3,GOOD:0,BAD:-50,MISS:-100};
 function updLife(){$('#g-life').textContent=Math.round(G.life);$('#g-lifei').style.width=G.life/10+'%';sec.classList.toggle('low',G.lifeOn&&G.life<300&&!G.finished)}
 function judge(g,dt,lane){G.cnt[g]++;G.pts+=PTS[g];G.judged++;
  if((g==='MISS'||g==='BAD')&&!G.finished){const now=performance.now();if(!(G.lastMissSnd>now-200)){G.lastMissSnd=now;AU.play('miss',1)}}
- if(G.lifeOn&&!G.finished){G.life=clamp(G.life+LIFE[g],0,1000);updLife();if(G.life<=0){gameOver();return}}
+ if(G.lifeOn&&!G.finished){G.life=clamp(G.life+LIFE[g],0,1000);updLife();if(G.life<=0){if(!SET.jako){gameOver();return}G.jakoUsed=true}}
  if(g==='BAD'||g==='MISS'){Stage.shake(stEl);G.combo=0;G.missUntil=performance.now()+(+G.song.missMs||700)}
  else{G.combo++;if(G.combo>G.maxCombo)G.maxCombo=G.combo;Stage.hop(stEl,(g==='PERFECT'?1:g==='GREAT'?.8:.55)*(G.combo>=G.song.comboTh?1.2:1),lane)}
  if(dt&&g!=='PERFECT'&&g!=='MISS'){dt<0?G.fast++:G.slow++}
@@ -368,11 +376,13 @@ function render(t){const[W,H]=fit(gc,gx);const g=geom(W,H);G.geo=g;const s=G.son
  // notes
  for(let l=0;l<4;l++){const a=G.lanes[l];let r=G.rs[l];while(r<a.length){const n=a[r];if(n.done&&(n.e==null||n.tail)&&(n.e??n.t)<t-60)r++;else break}G.rs[l]=r;
   for(let i=r;i<a.length;i++){const n=a[i],u=(n.t-t)/vis;if(u>1.02)break;
-   if(n.e!=null){if(n.tail&&!n.broken)continue;const holding=G.hold[l]===n;const uh=holding?0:Math.max(u,-.05),ut=Math.min((n.e-t)/vis,1);if(ut<-.05)continue;
+   if(n.e!=null){if(n.tail&&!n.broken)continue;const holding=G.hold[l]===n;
+    // a missed (grey) long note is cut off at the judge line instead of sliding below it
+    const lim=n.broken?0:-.05,uh=holding?0:Math.max(u,lim),ut=Math.min((n.e-t)/vis,1);if(ut<lim)continue;
     const sh=sOf(g,uh),st=sOf(g,Math.max(ut,uh)),c=n.broken?'#7b8a92':NL;
     quad(gx,[xOf(g,l+.16,st),yOf(g,st),xOf(g,l+.84,st),yOf(g,st),xOf(g,l+.84,sh),yOf(g,sh),xOf(g,l+.16,sh),yOf(g,sh)]);
     const gr=gx.createLinearGradient(0,yOf(g,st),0,yOf(g,sh));gr.addColorStop(0,hexA(lite(c,.3),.45));gr.addColorStop(1,hexA(lite(c,.3),holding?.95:.75));gx.fillStyle=gr;gx.fill();
-    if(ut<=1)drawNote(g,l,st,c,.6);if(!(n.done&&!holding&&!n.broken)&&uh<=1)drawNote(g,l,sh,c,1)}
+    if(ut<=1)drawNote(g,l,st,c,.6);if(!(n.done&&!holding&&!n.broken)&&uh<=1&&!(n.broken&&u<0))drawNote(g,l,sh,c,1)}
    else{if(n.done||u<-.05)continue;drawNote(g,l,sOf(g,u),NT,1)}}}
  // held long notes: pulsing glow on the judge line + a steady stream of sparks
  for(let l=0;l<4;l++){if(!G.hold[l]||!G.held[l]||G.paused)continue;const x=xOf(g,l+.5,1),c=NL,R=g.hb/9,ph=performance.now()/1000,pr=R*(1.05+.2*Math.sin(ph*16));
@@ -443,7 +453,7 @@ function showResult(){if(!G.active)return;P.pause();G.running=false;cancelAnimat
  const di=BS.diffInfo(s.diff),dp=$('#r-diff');dp.style.setProperty('--dc',di.c);dp.style.setProperty('--dt',di.t);dp.innerHTML=`${di.n} <b>${s.level??''}</b>`;
  $('#r-title').textContent=s.title;$('#r-art').textContent=s.artist||'';$('#r-score').textContent='0';$('#r-gauge').style.width='0%';
  let extra='';if(G.opt.onResult){try{extra=G.opt.onResult({failed,rank,score:sc,acc,fc:!!fc,ap:!!ap,test:!!G.opt.test,maxCombo:G.maxCombo})||''}catch(e){}}
- $('#r-badges').innerHTML=extra+(newRec?'<span class="badge">NEW RECORD</span>':'')+(ap?'<span class="badge c">ALL PERFECT</span>':fc?'<span class="badge c">FULL COMBO</span>':'')+(failed?'<span class="badge gy">라이프 소진</span>':'')+(G.opt.test?'<span class="badge gy">테스트 플레이</span>':'');
+ $('#r-badges').innerHTML=extra+(newRec?'<span class="badge">NEW RECORD</span>':'')+(ap?'<span class="badge c">ALL PERFECT</span>':fc?'<span class="badge c">FULL COMBO</span>':'')+(failed?'<span class="badge gy">라이프 소진</span>':'')+(G.jakoUsed&&!failed?'<span class="badge gy">쟈코 모드</span>':'')+(G.opt.test?'<span class="badge gy">테스트 플레이</span>':'');
  $('#r-tab').innerHTML=['PERFECT','GREAT','GOOD','BAD','MISS'].map(k=>[k,c[k],'j-'+k]).concat([['MAX COMBO',G.maxCombo,'j-etc'],['정확도',acc.toFixed(2)+'%','j-etc'],['FAST / SLOW',G.fast+' / '+G.slow,'j-etc']]).map((r,i)=>`<tr style="animation-delay:${1.05+i*.06}s"><td class="${r[2]}">${r[0]}</td><td>${r[1]}</td></tr>`).join('');
  $('#r-back').textContent=G.opt.backLabel||'돌아가기';
  sec.classList.remove('res-on','over','ending');$('#g-res').classList.remove('out');void sec.offsetWidth;sec.classList.add('res-on');BS.swoosh(.45);

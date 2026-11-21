@@ -47,7 +47,7 @@ let seed=1;const rnd=()=>(seed=seed*16807%2147483647)/2147483647;
 const DCFG={easy:{div:1,nps:1.25,min:1,chord:0,ln:3},normal:{div:2,nps:2.6,min:.5,chord:.92,ln:2},hard:{div:4,nps:4.6,min:.25,chord:.8,ln:1.5}};
 function makeChart(pk,F,bpm,off,dk,durMs){const c=DCFG[dk],beat=60000/bpm,cand=new Map();
  for(const p of pk){const b=(p.t-off)/beat;if(b<0)continue;const q=Math.round(b*c.div)/c.div;if(Math.abs(b-q)*beat>Math.min(90,beat/c.div*.45))continue;const ex=cand.get(q);if(!ex||ex.s<p.s)cand.set(q,{b:q,s:p.s,band:p.band,f:p.f})}
- let list=[...cand.values()].sort((a,b)=>b.s-a.s);const target=Math.max(8,Math.round(c.nps*durMs/1000));const picked=[];
+ const allc=[...cand.values()].sort((a,b)=>a.b-b.b);let list=[...cand.values()].sort((a,b)=>b.s-a.s);const target=Math.max(8,Math.round(c.nps*durMs/1000));const picked=[];
  const near=(b)=>picked.some(x=>Math.abs(x.b-b)<c.min-1e-6);
  for(const p of list){if(picked.length>=target)break;if(near(p.b))continue;picked.push(p)}
  picked.sort((a,b)=>a.b-b.b);
@@ -60,8 +60,14 @@ function makeChart(pk,F,bpm,off,dk,durMs){const c=DCFG[dk],beat=60000/bpm,cand=n
   if(ng>=c.ln){const f0=p.f,f1=Math.min(F.rms.length-1,f0+Math.round((ng*beat*.7)/1000*FPS));let m=0,k=0;for(let f=f0+2;f<f1;f++){m+=F.rms[f];k++}m=k?m/k:0;
    if(m>F.rms[f0]*.55&&F.rms[f0]>.02){const e=p.b+Math.max(1,Math.floor((ng-.5)*c.div)/c.div);if(e>p.b)n.e=e}}
   notes.push(n);
+  // keep the other hand busy during a long note: taps on other lanes, on the music's accents where there are any
+  if(n.e!=null){const step=dk==='easy'?2:dk==='normal'?1:.5,avail=[0,1,2,3].filter(x=>x!==l),opp=avail.filter(x=>(x<2)!==(l<2));let lb=p.b,lx=-1;
+   for(let b=p.b+step;b<n.e-step*.5+1e-6;b+=step){const nb=allc.filter(q=>q.b>lb+c.min-1e-6&&q.b<n.e-.24&&Math.abs(q.b-b)<step/2+1e-6);
+    const bb=nb.length?nb.reduce((a,q)=>q.s>a.s?q:a).b:b;if(bb<=lb+1e-6||bb>=n.e-.24)continue;
+    let pool=(rnd()<.7&&opp.length?opp:avail).filter(x=>x!==lx);if(!pool.length)pool=avail;const x=pool[Math.floor(rnd()*pool.length)];notes.push({b:bb,l:x});lx=x;lb=bb}}
   if(p.s>=chordS&&Math.abs(p.b-Math.round(p.b))<1e-6&&n.e==null){const l2=3-l!==l?3-l:(l+1)%4;notes.push({b:p.b,l:l2})}
   last=l;lastB=p.b}
+ notes.sort((a,b)=>a.b-b.b||a.l-b.l);
  const secs=durMs/1000,nps=notes.length/Math.max(1,secs),lv=dk==='easy'?Math.min(5,Math.max(1,Math.round(1+nps*1.2))):dk==='normal'?Math.min(8,Math.max(3,Math.round(2+nps*1.2))):Math.min(13,Math.max(5,Math.round(3+nps*1.3)));
  return{level:lv,notes}}
 

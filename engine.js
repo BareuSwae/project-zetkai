@@ -13,7 +13,7 @@ Object.assign(BS,{$,$$,clamp,esc,LS,COARSE,pick});
 /* ---------- constants ---------- */
 BS.DIFFS=[{k:'easy',n:'EASY',c:'#1fb8a6',t:'#fff'},{k:'normal',n:'NORMAL',c:'#f5c518',t:'#2a2200'},{k:'hard',n:'HARD',c:'#9b5de5',t:'#fff'}];
 BS.diffInfo=k=>BS.DIFFS.find(d=>d.k===k)||BS.DIFFS[1];
-BS.VERSION='v26';
+BS.VERSION='v27';
 BS.LINES={S:['캬ㅏㅏㅏ 이게 나야 이게 나야!!','봤습니까 여러분들? 저 리듬게임 잘해요~'],A:['솔직히 이정도면 잘한거죠 인정?','뭐 한두개쯤은 틀릴 수 있는거 아니에요?'],B:['뭐...그럴 수 있죠ㅋㅋ','아 곡이 어려운거임~'],C:['뭐...D는 아니지 않습니까?','아ㅋㅋ오케이 완벽히 깨달았다ㅋㅋ'],D:['사실 리트 하려고 했는데 D랭크는 뭔 말할지 궁금해서 일부러 받은거임~!!']};
 BS.RANKS=[['C',70],['B',80],['A',90],['S',95]];
 /* achievements (names/descriptions can be changed in the developer tool) */
@@ -213,13 +213,13 @@ const Stage=BS.Stage={
  size(el){const s=el._song;if(!s)return;const n=Math.max(1,s.chars.length),w=el.clientWidth||300,h=el.clientHeight||150;el.style.setProperty('--cw',Math.min(w*.9/n,h*.8,280)+'px')},
  hop(el,amp=1){const now=performance.now();(el._st||[]).forEach((s,i)=>{const d=i*14+Math.random()*30;if(now+d-s.h0>120){s.h0=now+d;s.amp=amp}})},
  shake(el){const now=performance.now();(el._st||[]).forEach((s,i)=>{if(now-s.sh>380){s.sh=now+i*25;s.sd=Math.random()<.5?-1:1}})},
- flip(el){const now=performance.now();(el._st||[]).forEach((s,i)=>{s.fl=now+i*45;s.h0=now+i*45;s.amp=1.5})},
+ flip(el){const now=performance.now();(el._st||[]).forEach((s,i)=>{s.fl=now+i*45;s.h0=now+i*45;s.amp=3.2})},
  tick(el,state,beat){const s=el._song;if(!s)return;const now=performance.now(),kids=el.children;
   // groove: a small dip on every beat of the song's BPM
   const gb=beat!=null&&beat>=0?Math.exp(-(beat%1)*7):0;
   for(let i=0;i<kids.length;i++){const c=s.chars[i],st=el._st[i];if(!c||!st)continue;const im=kids[i].firstChild;const src=BS.charSrc(c,c.__i??i,state);if(im._s!==src){im.src=src;im._s=src}
-   const h=kids[i].clientHeight||100;let ty=0,tx=0,sx=1,sy=1;const dt=now-st.h0,D=240;
-   if(dt>=0&&dt<D){const p=dt/D,j=(c.jump??100)/100;ty=-Math.sin(Math.PI*p)*h*.09*st.amp*j;if(p>.8){const q=Math.sin(Math.PI*(p-.8)/.2)*j;sy=1-.03*q*st.amp;sx=1+.02*q*st.amp}}
+   const h=kids[i].clientHeight||100;let ty=0,tx=0,sx=1,sy=1;const dt=now-st.h0,D=st.amp>2?420:240;
+   if(dt>=0&&dt<D){const p=dt/D,j=(c.jump??100)/100;ty=-Math.sin(Math.PI*p)*h*.045*st.amp*j;if(p>.8){const q=Math.sin(Math.PI*(p-.8)/.2)*j;sy=1-.03*q*st.amp;sx=1+.02*q*st.amp}}
    if(gb){ty+=h*.022*gb;sy*=1-.035*gb;sx*=1+.025*gb}
    let rot=0;const ds=now-st.sh,DS=560;if(ds>=0&&ds<DS){const p=ds/DS,k=Math.sin(Math.PI*Math.min(1,p*1.6))*(1-p);rot=st.sd*16*k;ty+=h*.03*k;sy*=1-.05*k;tx=st.sd*h*.02*k}
    const df=now-st.fl,DF=480;if(df>=0&&df<DF){const p=df/DF,e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;sx*=Math.cos(e*Math.PI*2)}
@@ -261,6 +261,7 @@ BS.LC=['#00ffff','#ffc800','#ffc800','#00ffff'];
 /* note / rail colours (set in the developer tool) */
 BS.COLOR_DEF={tap:'#00ffff',long:'#ffc800',rail:'#46c5bd',outer:'#00ffff',inner:'#ffc800'};
 BS.COLOR_KEYS=[['tap','일반 노트'],['long','롱노트'],['rail','바깥 레일'],['outer','D·K 레인 (판정선·이펙트)'],['inner','F·J 레인 (판정선·이펙트)']];
+BS.setStageImage=src=>{const r=document.documentElement;if(src){r.style.setProperty('--stage-img',`url("${src}")`);document.body.classList.add('stimg')}else{r.style.removeProperty('--stage-img');document.body.classList.remove('stimg')}};
 BS.setColors=c=>{const ok=v=>typeof v==='string'&&/^#[0-9a-f]{6}$/i.test(v);const d=BS.COLOR_DEF,g=k=>ok(c&&c[k])?c[k]:d[k];NT=g('tap');NL=g('long');RAIL=g('rail');BS.LC[0]=BS.LC[3]=g('outer');BS.LC[1]=BS.LC[2]=g('inner')};
 const sec=$('#bs-g'),gc=$('#g-cv'),gx=gc.getContext('2d'),stEl=$('#g-stage .stage');
 const G=BS.G={running:false,active:false};

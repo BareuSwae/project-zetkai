@@ -318,7 +318,7 @@ const rel=(p,base)=>p?(/^(data:|https?:|blob:)/.test(p)?p:base+p):null;
 async function loadFolder(){await loadScript('songs/songs.js');
  GAMECFG=Object.assign({},window.BEAT_GAME||{});const sys=GAMECFG;
  GAMECFG.splashItems=(sys.splash&&sys.splash.items||[]).map(it=>({src:rel(it.src,'songs/'),snd:rel(it.snd,'songs/'),ms:+it.ms||2000}));GAMECFG.splashBg=sys.splash&&sys.splash.bg||'#ffffff';
- GAMECFG.titleBgSrc=rel(sys.titleBg,'songs/');GAMECFG.titleBgmSrc=rel(sys.titleBgm,'songs/');GAMECFG.bannerSrc=rel(sys.banner,'songs/');GAMECFG.touchImgSrc=rel(sys.touchImg,'songs/');GAMECFG.clearImgSrc=rel(sys.clearImg,'songs/');GAMECFG.ach=sys.ach||{};GAMECFG.colors=sys.colors||null;
+ GAMECFG.titleBgSrc=rel(sys.titleBg,'songs/');GAMECFG.titleBgmSrc=rel(sys.titleBgm,'songs/');GAMECFG.bannerSrc=rel(sys.banner,'songs/');GAMECFG.touchImgSrc=rel(sys.touchImg,'songs/');GAMECFG.clearImgSrc=rel(sys.clearImg,'songs/');GAMECFG.ach=sys.ach||{};GAMECFG.colors=sys.colors||null;GAMECFG.stageImgSrc=rel(sys.stageImg,'songs/');
  COMICS=(window.BEAT_COMICS||[]).filter(c=>c&&c.pages&&c.pages.length).map(c=>({id:c.id,title:c.title||'',desc:c.desc||'',pages:c.pages.map(p=>rel(p,'songs/'))}));
  GAMECFG.soundSrc={};for(const k in (sys.sounds||{})){const v=rel(sys.sounds[k],'songs/');if(v)GAMECFG.soundSrc[k]=v}GAMECFG.soundVol=sys.soundVol||{};
  GAMECFG.resultChar={};for(const k of 'SABCD'){const v=sys.resultChar&&sys.resultChar[k];if(v)GAMECFG.resultChar[k]=rel(v,'songs/')}
@@ -330,7 +330,7 @@ async function loadDev(){const db=await new Promise((res,rej)=>{const r=indexedD
  const all=n=>db.objectStoreNames.contains(n)?new Promise(res=>{const q=db.transaction(n,'readonly').objectStore(n).getAll();q.onsuccess=()=>res(q.result||[]);q.onerror=()=>res([])}):Promise.resolve([]);
  const[songs,comics,roster,system]=await Promise.all([all('songs'),all('comics'),all('roster'),all('system')]);
  const g=LS.get('bs_dev_game',{}),sys=system.find(x=>x.id==='sys')||{};const url=b=>b?URL.createObjectURL(b):null;
- GAMECFG=Object.assign({title:'프로젝트 젯카이'},g,{splashItems:(sys.splash||[]).map(it=>({src:it.img,snd:url(it.snd),ms:+it.ms||2000})),splashBg:sys.splashBg||'#ffffff',titleBgSrc:sys.titleBg||null,titleBgmSrc:url(sys.bgm),bannerSrc:sys.banner||null,touchImgSrc:sys.touchImg||null,clearImgSrc:sys.clearImg||null,ach:sys.ach||{},colors:sys.colors||null,startTickets:sys.startTickets??3});
+ GAMECFG=Object.assign({title:'프로젝트 젯카이'},g,{splashItems:(sys.splash||[]).map(it=>({src:it.img,snd:url(it.snd),ms:+it.ms||2000})),splashBg:sys.splashBg||'#ffffff',titleBgSrc:sys.titleBg||null,titleBgmSrc:url(sys.bgm),bannerSrc:sys.banner||null,touchImgSrc:sys.touchImg||null,clearImgSrc:sys.clearImg||null,ach:sys.ach||{},colors:sys.colors||null,stageImgSrc:sys.stageImg||null,startTickets:sys.startTickets??3});
  COMICS=comics.filter(c=>c.include!==false&&c.pages&&c.pages.length).sort((a,b)=>(a.order||0)-(b.order||0)).map(c=>({id:c.id,title:c.title||'',desc:c.desc||'',pages:c.pages}));
  GAMECFG.resultChar=Object.assign({},sys.resultImg||{});GAMECFG.soundSrc={};for(const k in (sys.sounds||{})){const v=sys.sounds[k];if(v&&v.f)GAMECFG.soundSrc[k]=v.f}GAMECFG.soundVol=sys.soundVol||{};
  ROSTER=roster.filter(c=>c.include!==false).sort((a,b)=>(a.order||0)-(b.order||0));
@@ -340,7 +340,7 @@ async function boot(){
  let ok=false;if(DEV){try{ok=await loadDev()}catch(e){}if(ok){$('#devTag').hidden=false;$('#gaDev').hidden=false}else BS.toast('도구에 저장된 곡이 없어서 songs 폴더를 불러왔습니다')}
  if(!ok){try{await loadFolder()}catch(e){$('#tPress').innerHTML='songs 폴더를 찾을 수 없습니다<em>개발자 도구로 빌드한 songs 폴더를 이 파일 옆에 두십시오.</em>';return}}
 if(GAMECFG.title){$('#tLogo').textContent=GAMECFG.title;document.title=GAMECFG.title}$('#tSub').textContent=GAMECFG.subtitle||'';
- setTitleBg();BS.setColors(GAMECFG.colors);BS.setTouchImage(GAMECFG.touchImgSrc||null);
+ setTitleBg();BS.setColors(GAMECFG.colors);BS.setStageImage(GAMECFG.stageImgSrc||null);BS.setTouchImage(GAMECFG.touchImgSrc||null);
  if(GAMECFG.titleBgmSrc)bgm.src=GAMECFG.titleBgmSrc;
  BS.AU.setCustom(GAMECFG.soundSrc||{});BS.AU.vol=Object.assign({},GAMECFG.soundVol||{});
  if(GAMECFG.bannerSrc){const b=$('#gaBanner');b.classList.add('img');b.style.backgroundImage=`url("${GAMECFG.bannerSrc}")`}

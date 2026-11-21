@@ -50,8 +50,13 @@ input[type=checkbox]{accent-color:var(--mi);width:18px;height:18px}
 .platform{position:absolute;inset:0;pointer-events:none}
 .platform .glow{position:absolute;left:10%;right:10%;bottom:12%;height:120%;background:radial-gradient(ellipse 50% 60% at 50% 100%,rgba(24,216,224,.25),transparent 70%)}
 .platform .top{position:absolute;left:50%;bottom:9%;width:min(98%,980px);height:30%;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse 60% 70% at 50% 35%,#3c5763,#1d2b33 60%,#121b21);box-shadow:inset 0 3px 0 rgba(24,216,224,.5),0 0 40px rgba(0,0,0,.5)}
-.platform .lip{position:absolute;left:50%;bottom:0;width:min(98%,980px);height:13%;transform:translateX(-50%);border-radius:0 0 40% 40%/0 0 100% 100%;background-image:radial-gradient(circle,var(--co) 0 2px,transparent 3px),linear-gradient(#18232a,#0a1014);background-size:28px 100%,100% 100%;background-position:center 40%,0 0}
-.platform .stage{position:absolute;left:0;right:0;bottom:19%;height:70%}
+.platform .lip{position:absolute;left:50%;bottom:3%;width:min(98%,980px);height:33%;transform:translateX(-50%);border-radius:50%/45.45%;background:linear-gradient(#1a262d,#0a1014 70%);box-shadow:0 10px 26px rgba(0,0,0,.55),0 4px 18px rgba(24,216,224,.12)}
+.platform .lip::after{content:"";position:absolute;inset:0 4px 7px;border-radius:50%/45.45%;border-bottom:4px dotted var(--co);opacity:.85;filter:drop-shadow(0 0 3px var(--co))}
+.platform .top{z-index:1}
+/* custom stage image (developer tool) replaces the drawn platform */
+body.stimg .platform>.glow,body.stimg .platform>.top,body.stimg .platform>.lip{display:none}
+body.stimg .platform::before{content:"";position:absolute;left:50%;bottom:0;width:min(98%,980px);height:100%;transform:translateX(-50%);background:var(--stage-img) center bottom/100% auto no-repeat}
+.platform .stage{position:absolute;left:0;right:0;bottom:19%;height:70%;z-index:2}
 
 /* ---------- GAME ---------- */
 .g{position:fixed;inset:0;z-index:100;background:#000;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;display:none}

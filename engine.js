@@ -13,7 +13,7 @@ Object.assign(BS,{$,$$,clamp,esc,LS,COARSE,pick});
 /* ---------- constants ---------- */
 BS.DIFFS=[{k:'easy',n:'EASY',c:'#1fb8a6',t:'#fff'},{k:'normal',n:'NORMAL',c:'#f5c518',t:'#2a2200'},{k:'hard',n:'HARD',c:'#9b5de5',t:'#fff'}];
 BS.diffInfo=k=>BS.DIFFS.find(d=>d.k===k)||BS.DIFFS[1];
-BS.VERSION='v35';
+BS.VERSION='v42';
 BS.LINES={S:['캬ㅏㅏㅏ 이게 나야 이게 나야!!','봤습니까 여러분들? 저 리듬게임 잘해요~'],A:['솔직히 이정도면 잘한거죠 인정?','뭐 한두개쯤은 틀릴 수 있는거 아니에요?'],B:['뭐...그럴 수 있죠ㅋㅋ','아 곡이 어려운거임~'],C:['뭐...D는 아니지 않습니까?','ㅋㅋㅋㅋㅋㅋㅋ오케이!! 완벽히 깨달았다!'],D:['사실 D랭크는 뭔 말할지 궁금해서 일부러 받은거임~!!','뭐하는거야~ 마짱뜰래~!!']};
 BS.RANKS=[['C',70],['B',80],['A',90],['S',95]];
 /* achievements (names/descriptions can be changed in the developer tool) */
@@ -247,7 +247,7 @@ document.body.insertAdjacentHTML('beforeend',`<section class="g" id="bs-g">
   <div class="lf" id="g-lf"><div><span class="lb">LIFE</span><b id="g-life" class="mono">1000</b><div class="lifebar"><i id="g-lifei"></i></div></div></div>
   <button id="g-pause" class="icon" aria-label="일시정지">II</button></div>
  <div class="g-over"><b>GAME OVER</b></div>
- <div class="g-judge" id="g-judge"><b></b><small></small></div><div class="g-combo" id="g-combo"></div>
+ <div class="g-judge" id="g-judge"><b></b><small></small></div><div class="g-combo off" id="g-combo"><small>COMBO</small><b class="cn"></b></div><div class="g-fc" id="g-fc"><b>FULL COMBO</b></div>
  <button class="g-skip" id="g-skip" hidden>결과 보기 →</button>
  <div class="g-res" id="g-res"><div class="rbg"></div>
   <div class="rbox"><div class="ribbon" id="r-banner"><span></span></div>
@@ -306,7 +306,7 @@ BS.play=async(song,opt={})=>{AU.init();P.pause();G.running=false;cancelAnimation
  G.endMs=P.has&&P.dur?P.dur*1000:G.lastEnd+1800;
  $('#g-pm').classList.remove('on');$('#g-skip').hidden=true;
  const di=BS.diffInfo(song.diff);$('#g-title').textContent=`${song.title}  ·  ${di.n} ${song.level??''}${opt.test?'  ·  테스트':''}`;
- const j=$('#g-judge');j.className='g-judge';j.querySelector('b').textContent='';j.querySelector('small').textContent='';$('#g-combo').textContent='';
+ const j=$('#g-judge');j.className='g-judge';j.querySelector('b').textContent='';j.querySelector('small').textContent='';$('#g-combo').classList.add('off');$('#g-fc').classList.remove('on');G.fcShown=false;
  Stage.build(stEl,song);stEl.classList.remove('sad');updHud();
  tp.clear();P.setRate(1);P.seek(G.start);P.play();
  G.running=true;G.raf=requestAnimationFrame(loop)};
@@ -329,7 +329,7 @@ function update(t){for(let l=0;l<4;l++){const a=G.lanes[l];let p=G.ptr[l];
 
 const LIFE={PERFECT:6,GREAT:3,GOOD:0,BAD:-50,MISS:-100};
 function updLife(){$('#g-life').textContent=Math.round(G.life);$('#g-lifei').style.width=G.life/10+'%';sec.classList.toggle('low',G.lifeOn&&G.life<300&&!G.finished)}
-function judge(g,dt,lane){G.cnt[g]++;G.pts+=PTS[g];G.judged++;
+function judge(g,dt,lane){G.cnt[g]++;G.pts+=PTS[g];G.judged++;setTimeout(checkFC,0);
  if((g==='MISS'||g==='BAD')&&!G.finished){const now=performance.now();if(!(G.lastMissSnd>now-200)){G.lastMissSnd=now;AU.play('miss',1)}}
  if(G.lifeOn&&!G.finished){G.life=clamp(G.life+LIFE[g],0,1000);updLife();if(G.life<=0){if(!SET.jako){gameOver();return}G.jakoUsed=true}}
  if(g==='BAD'||g==='MISS'){Stage.shake(stEl);G.combo=0;G.missUntil=performance.now()+(+G.song.missMs||700)}
@@ -338,9 +338,17 @@ function judge(g,dt,lane){G.cnt[g]++;G.pts+=PTS[g];G.judged++;
  const j=$('#g-judge');j.className='g-judge';void j.offsetWidth;j.className='g-judge '+g+' pop';j.querySelector('b').textContent=g;const sm=j.querySelector('small');
  if(dt&&g!=='PERFECT'&&g!=='MISS'){sm.textContent=dt<0?'FAST':'SLOW';sm.className=dt<0?'f':'s'}else{sm.textContent='';sm.className=''}
  clearTimeout(G.jt);G.jt=setTimeout(()=>j.classList.add('fade'),350);
- const c=$('#g-combo');if(G.combo>=2){c.innerHTML=`<small>COMBO</small>${G.combo}`;c.classList.remove('pop');void c.offsetWidth;c.classList.add('pop')}else c.textContent='';
+ showCombo();
  updHud()}
-function holdTick(l){G.combo++;if(G.combo>G.maxCombo)G.maxCombo=G.combo;G.beam[l]=1;const c=$('#g-combo');c.innerHTML=`<small>COMBO</small>${G.combo}`;c.classList.remove('pop');void c.offsetWidth;c.classList.add('pop');Stage.hop(stEl,.4,l);
+BS.setComboFx=()=>{};BS.setGlassesImage=()=>{};
+function clearCfx(){}
+function showCombo(){const c=$('#g-combo');if(G.combo<2){c.classList.add('off');return}
+ c.classList.remove('off');c.querySelector('.cn').textContent=G.combo;c.classList.remove('pop');void c.offsetWidth;c.classList.add('pop')}
+/* full combo call-out: as soon as the last note is judged without a miss/bad */
+function checkFC(){if(G.fcShown||G.failed||G.judged<G.total||!G.total)return;const c=G.cnt;if(c.MISS+c.BAD>0)return;G.fcShown=true;
+ const ap=c.PERFECT===G.total,el=$('#g-fc');el.querySelector('b').textContent=ap?'ALL PERFECT':'FULL COMBO';el.classList.toggle('ap',ap);el.classList.remove('on');void el.offsetWidth;el.classList.add('on');$('#g-combo').classList.add('off');
+ AU.play('fan',.7);const g=G.geo;if(g){for(let l=0;l<4;l++)spark(l,true)}}
+function holdTick(l){G.combo++;if(G.combo>G.maxCombo)G.maxCombo=G.combo;G.beam[l]=1;showCombo();Stage.hop(stEl,.4,l);
  spark(l,false,true)}
 function updHud(){const r=G.total?G.pts/G.total:0;$('#g-score').textContent=Math.round(1e6*r).toLocaleString('en-US');$('#g-gauge').style.width=r*100+'%'}
 
@@ -454,7 +462,7 @@ function showResult(){if(!G.active)return;P.pause();G.running=false;cancelAnimat
  $('#r-title').textContent=s.title;$('#r-art').textContent=s.artist||'';$('#r-score').textContent='0';$('#r-gauge').style.width='0%';
  let extra='';if(G.opt.onResult){try{extra=G.opt.onResult({failed,rank,score:sc,acc,fc:!!fc,ap:!!ap,test:!!G.opt.test,maxCombo:G.maxCombo})||''}catch(e){}}
  $('#r-badges').innerHTML=extra+(newRec?'<span class="badge">NEW RECORD</span>':'')+(ap?'<span class="badge c">ALL PERFECT</span>':fc?'<span class="badge c">FULL COMBO</span>':'')+(failed?'<span class="badge gy">라이프 소진</span>':'')+(G.jakoUsed&&!failed?'<span class="badge gy">쟈코 모드</span>':'')+(G.opt.test?'<span class="badge gy">테스트 플레이</span>':'');
- $('#r-tab').innerHTML=['PERFECT','GREAT','GOOD','BAD','MISS'].map(k=>[k,c[k],'j-'+k]).concat([['MAX COMBO',G.maxCombo,'j-etc'],['정확도',acc.toFixed(2)+'%','j-etc'],['FAST / SLOW',G.fast+' / '+G.slow,'j-etc']]).map((r,i)=>`<tr style="animation-delay:${1.05+i*.06}s"><td class="${r[2]}">${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+ $('#r-tab').innerHTML=['PERFECT','GREAT','GOOD','BAD','MISS'].map(k=>[k,c[k],'j-'+k]).concat([['MAX COMBO',G.maxCombo,'j-etc'],['정확도',acc.toFixed(2)+'%','j-etc'],['FAST / SLOW',G.fast+' / '+G.slow,'j-etc']]).map((r,i)=>`<tr style="animation-delay:${1.05+i*.06}s"><td class="${r[2]}"><span>${r[0]}</span></td><td>${r[1]}</td></tr>`).join('');
  $('#r-back').textContent=G.opt.backLabel||'돌아가기';
  sec.classList.remove('res-on','over','ending');$('#g-res').classList.remove('out');void sec.offsetWidth;sec.classList.add('res-on');BS.swoosh(.45);
  const resState=failed?'miss':rank==='S'||rank==='A'?'combo':rank==='D'?'miss':'idle';stEl.classList.toggle('sad',failed||rank==='D');Stage.size(stEl);

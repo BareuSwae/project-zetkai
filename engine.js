@@ -13,7 +13,8 @@ Object.assign(BS,{$,$$,clamp,esc,LS,COARSE,pick});
 /* ---------- constants ---------- */
 BS.DIFFS=[{k:'easy',n:'EASY',c:'#1fb8a6',t:'#fff'},{k:'normal',n:'NORMAL',c:'#f5c518',t:'#2a2200'},{k:'hard',n:'HARD',c:'#9b5de5',t:'#fff'}];
 BS.diffInfo=k=>BS.DIFFS.find(d=>d.k===k)||BS.DIFFS[1];
-BS.LINES={S:['캬ㅏㅏㅏ 이게 나야 이게 나야!!','봤습니까 여러분들? 저 리듬게임 잘해요~'],A:['솔직히 이정도면 잘한거죠 인정?','뭐 한두개쯤은 틀릴 수 있는거 아니에요?'],B:['뭐...그럴 수 있죠ㅋㅋ','아 곡이 어려운거임~'],C:['뭐...D는 아니지 않습니까?','아ㅋㅋ오케이 완벽히 깨달았다ㅋㅋ'],D:['사실 리트 하려고 했는데 D랭크는 뭔 말할지 궁금해서 일부러 받은거임~!!'],F:['어…? 벌써 끝난 거 아니죠…?','방금 건 리허설이었어요. 진짜는 다음 판!']};
+BS.VERSION='v23';
+BS.LINES={S:['캬ㅏㅏㅏ 이게 나야 이게 나야!!','봤습니까 여러분들? 저 리듬게임 잘해요~'],A:['솔직히 이정도면 잘한거죠 인정?','뭐 한두개쯤은 틀릴 수 있는거 아니에요?'],B:['뭐...그럴 수 있죠ㅋㅋ','아 곡이 어려운거임~'],C:['뭐...D는 아니지 않습니까?','아ㅋㅋ오케이 완벽히 깨달았다ㅋㅋ'],D:['사실 리트 하려고 했는데 D랭크는 뭔 말할지 궁금해서 일부러 받은거임~!!']};
 BS.RANKS=[['C',70],['B',80],['A',90],['S',95]];
 /* achievements (names/descriptions can be changed in the developer tool) */
 BS.ACH_DEF=[['firstClear','사람이 된 달팽이','처음으로 곡을 클리어했습니다'],['firstFC','겜잘스','처음으로 풀 콤보를 달성했습니다'],['firstAP','마젯 우승~','처음으로 올 퍼펙트를 달성했습니다'],['firstOver','헛소리 안하기 1일차','처음으로 COMBO OVER를 겪었습니다'],['firstScout','너는 무슨 유입이니?','처음으로 스카우트했습니다'],['fullTeam','다섯이 모이면...','라이브 멤버 5명을 배치해 라이브를 진행했습니다'],['allChars','달팽이 점액짜내기 공장','모든 캐릭터를 모았습니다'],['allComics','집에서만 보세요','모든 로딩 만화를 수집했습니다'],['allS','절대 마젯을 이기려 들지 마','모든 곡에서 S 랭크를 받았습니다'],['allUnlock','플레이 해주셔서 감사합니다!','모든 만화와 캐릭터를 해금했습니다']];
@@ -442,8 +443,8 @@ function showResult(){if(!G.active)return;P.pause();G.running=false;cancelAnimat
  cancelAnimationFrame(G.rraf);G.rraf=requestAnimationFrame(rl);
  setTimeout(()=>{if(!sec.classList.contains('res-on'))return;const f=$('#r-flash');f.classList.remove('go');void f.offsetWidth;if(rank!=='D'&&!failed){f.classList.add('go');AU.play('fan',.5)}
   if(!failed)startConf({S:260,A:180,B:110,C:60,D:0}[rank],rank)},760);
- const lk=failed?'F':rank,lines=(G.opt.lines&&G.opt.lines[lk]&&G.opt.lines[lk].length?G.opt.lines:BS.LINES)[lk]||BS.LINES[lk];
- const RC=G.opt.resultChar||{},mood={S:'combo',A:'combo',B:'idle',C:'idle',D:'miss',F:'miss'}[lk],rcImg=$('#r-char');rcImg.classList.remove('on');rcImg.src=RC[lk]||(lk==='F'?RC.D:null)||BS.defChar(4,mood);
+ const lk=rank,lines=(G.opt.lines&&G.opt.lines[lk]&&G.opt.lines[lk].length?G.opt.lines:BS.LINES)[lk]||BS.LINES[lk];
+ const RC=G.opt.resultChar||{},mood={S:'combo',A:'combo',B:'idle',C:'idle',D:'miss'}[lk]||'idle',rcImg=$('#r-char');rcImg.classList.remove('on');rcImg.src=RC[lk]||BS.defChar(4,mood);
  clearTimeout(G.bt);clearTimeout(G.bt2);G.bt2=setTimeout(()=>{if(sec.classList.contains('res-on')){rcImg.classList.add('on');BS.swoosh(.3)}},1100);G.bt=setTimeout(()=>showBubble(pick(lines)),1750)}
 
 /* speech bubble */

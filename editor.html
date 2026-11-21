@@ -14,6 +14,7 @@
 .th{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px max(4vw,16px);border-bottom:1px solid var(--line);background:var(--bg2);position:sticky;top:0;z-index:2}
 .brand{flex:1;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .brand b{font:28px var(--disp)}
+.brand .ver{margin-left:8px;padding:1px 7px;border:1px solid var(--line);border-radius:99px;color:var(--mut);font:700 11px var(--num);letter-spacing:.04em;vertical-align:2px}
 .brand span{color:var(--mi);font:italic 800 13px var(--num);letter-spacing:.1em}
 .brand em{font-style:normal;color:var(--mut);font-size:14px}
 .btnlike{display:inline-flex;align-items:center;min-height:42px;padding:0 14px;border-radius:10px;border:1px solid var(--line);color:var(--ink);text-decoration:none;font-weight:500}
@@ -122,7 +123,7 @@ input[type=color]{width:44px;height:36px;padding:2px;border:1px solid var(--line
 
 <section id="home" class="screen on">
   <header class="th">
-    <div class="brand"><b id="hTitle">프로젝트 젯카이</b><span>DEVELOPER TOOL</span><em id="hSub"></em></div>
+    <div class="brand"><b id="hTitle">프로젝트 젯카이</b><span>DEVELOPER TOOL</span><small class="ver" id="hVer"></small><em id="hSub"></em></div>
     <button id="gameLink">게임 미리보기</button>
     <button id="hGame">게임 설정 · 대사</button><button id="hAch">업적 편집</button>
     <button id="hImport">불러오기</button>
@@ -220,6 +221,7 @@ BS.clickSound=false;
 const r6=v=>Math.round(v*1e6)/1e6;
 const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36);
 const toast=BS.toast;
+$('#hVer').textContent=BS.VERSION||'';
 const LAYOUT_LOCAL=/editor\.html$/i.test(location.pathname);
 const GAME_PAGE=LAYOUT_LOCAL?'index.html':'game.html',TOOL_PAGE=LAYOUT_LOCAL?'editor.html':'index.html';
 $('#gameLink').onclick=()=>{let pv=$('#gPrev');if(!pv){document.body.insertAdjacentHTML('beforeend','<div class="preview" id="gPrev"><button id="gPrevX">미리보기 닫기</button><iframe title="게임 미리보기" allow="autoplay; fullscreen"></iframe></div>');pv=$('#gPrev');$('#gPrevX').onclick=()=>{pv.classList.remove('on');pv.querySelector('iframe').src='about:blank'}}
@@ -245,7 +247,7 @@ const DB={db:null,mem:{songs:new Map(),comics:new Map(),roster:new Map(),system:
 const GAME=Object.assign({title:'프로젝트 젯카이',subtitle:'',galleryOpen:false,lines:null,tips:null,life:true},LS.get('bs_dev_game',{}));
 const DEF_TIPS=['노트 속도와 판정 오프셋은 설정에서 바꿀 수 있습니다.','롱노트는 끝까지 누르고 있어야 합니다.','휴대폰에서는 레인 아무 곳이나 터치하면 됩니다.','미스가 쌓여 라이프가 0이 되면 게임 오버! 퍼펙트로 조금씩 회복됩니다.','결과 화면에서 캐릭터가 한마디 해 줍니다.'];
 const gameTips=()=>Array.isArray(GAME.tips)&&GAME.tips.length?GAME.tips:DEF_TIPS;
-const gameLines=()=>{const L={};for(const k of 'SABCDF'){const a=GAME.lines&&GAME.lines[k];L[k]=Array.isArray(a)&&a.length?a:BS.LINES[k]}return L};
+const gameLines=()=>{const L={};for(const k of 'SABCD'){const a=GAME.lines&&GAME.lines[k];L[k]=Array.isArray(a)&&a.length?a:BS.LINES[k]}return L};
 function updBrand(){$('#hTitle').textContent=GAME.title||'제목 없는 게임';$('#hSub').textContent=GAME.subtitle||''}
 
 /* ---------- song model ---------- */
@@ -303,7 +305,7 @@ $('#hGame').onclick=()=>{const L=gameLines();BS.modal(`<h3>게임 설정 · 대�
  <label class="chk"><input type="checkbox" id="gOpen" ${GAME.galleryOpen?'checked':''}> 갤러리의 만화를 처음부터 전부 공개 (끄면 로딩 화면에서 본 만화만 열립니다)</label>
  <label class="chk"><input type="checkbox" id="gLife" ${GAME.life!==false?'checked':''}> 라이프 / 게임 오버 사용 (미스 −100, 배드 −50, 퍼펙트 +6, 그레이트 +3 · 최대 1000)</label>
  <h4 style="margin:6px 0 -4px">결과 화면 캐릭터 대사</h4><p class="sub">랭크별로 한 줄에 대사 하나씩. 결과 화면에서 무대 위 캐릭터 중 한 명이 랜덤으로 골라 말합니다.</p>
- <div class="lines">${'SABCDF'.split('').map(k=>`<label><b>${k==='F'?'게임 오버':k}</b><textarea data-l="${k}" rows="2">${esc(L[k].join('\n'))}</textarea></label>`).join('')}</div>
+ <div class="lines">${'SABCD'.split('').map(k=>`<label><b>${k}</b><textarea data-l="${k}" rows="2">${esc(L[k].join('\n'))}</textarea></label>`).join('')}</div>
  <div class="mbtns"><button class="ghost" id="gReset">대사 기본값</button><button class="pri" id="gOk">저장</button></div>`);
  $('#gReset').onclick=()=>{$$('[data-l]').forEach(t=>t.value=BS.LINES[t.dataset.l].join('\n'))};
  $('#gOk').onclick=()=>{GAME.title=$('#gT').value.trim();GAME.subtitle=$('#gS').value.trim();GAME.galleryOpen=$('#gOpen').checked;GAME.life=$('#gLife').checked;const L2={};$$('[data-l]').forEach(t=>{L2[t.dataset.l]=t.value.split('\n').map(x=>x.trim()).filter(Boolean)});GAME.lines=L2;LS.set('bs_dev_game',GAME);updBrand();BS.closeModal();toast('게임 설정을 저장했습니다')}};
@@ -323,7 +325,7 @@ const ACH_COND={firstClear:'곡을 처음 클리어',firstFC:'아무 곡이나 �
 /* ---------- roster (scout characters) ---------- */
 let ROS=[],SYS=null;
 const newSys=()=>({id:'sys',splash:[],splashBg:'#ffffff',titleBg:null,bgm:null,bgmName:'',banner:null,startTickets:3,resultImg:{},sounds:{},soundVol:{},touchImg:null,clearImg:null,ach:{},colors:{}});
-const RK=[['S','S 랭크'],['A','A 랭크'],['B','B 랭크'],['C','C 랭크'],['D','D 랭크'],['F','게임 오버']],RMOOD={S:'combo',A:'combo',B:'idle',C:'idle',D:'miss',F:'miss'};
+const RK=[['S','S 랭크'],['A','A 랭크'],['B','B 랭크'],['C','C 랭크'],['D','D 랭크']],RMOOD={S:'combo',A:'combo',B:'idle',C:'idle',D:'miss'};
 const SLN2={idle:'무대 기본',combo:'무대 콤보',miss:'무대 미스'};
 function renderRoster(){$('#rCount').textContent=ROS.length?`${ROS.length}명`:'';
  $('#rosterList').innerHTML=ROS.length?ROS.map((c,i)=>`<div class="rcd ${c.include===false?'off':''}" data-r="${esc(c.id)}" role="button" tabindex="0"><img alt="" src="${c.img||c.stage&&c.stage.idle||BS.defChar(i,'idle')}"><b>${esc(c.name||'이름 없음')}</b><small>${esc(c.kind||'종류 없음')}</small></div>`).join(''):'<div class="empty" style="grid-column:1/-1">아직 캐릭터가 없습니다. 이름, 종류, 설명, 한마디, 일러스트를 넣어 스카우트 캐릭터를 만듭니다.</div>'}
@@ -362,8 +364,8 @@ function renderSys(){const S=SYS,img=(k,lb,hint,cls='')=>`<div class="sysrow"><b
   <div class="row"><button id="colPrev">미리보기</button><button class="ghost" id="colReset">기본 색으로</button></div></div>
  ${img('touchImg','터치 효과 이미지','화면을 누를 때 퍼지는 별 대신 나올 이미지입니다. 투명 배경 PNG, 정사각형 추천 (작게 줄여 저장됩니다). 비워 두면 기본 민트 별이 나옵니다.')}
  ${img('banner','스카우트 배너','스카우트 화면 왼쪽 위 배너. 16:10 추천. 없으면 기본 무늬가 나옵니다.','wide-img')}
- <div class="sysrow"><b>결과 화면 캐릭터</b><span class="sub">결과창 오른쪽에서 랭크별 대사를 말하는 캐릭터입니다. 랭크마다 다른 이미지를 넣습니다 (비운 칸은 기본 그림, 게임 오버가 비면 D 이미지). 투명 배경 PNG 추천.</span>
-  <div class="rslots" style="grid-template-columns:repeat(6,minmax(0,1fr));max-width:620px">${RK.map(([k,lb])=>{const v=S.resultImg&&S.resultImg[k];return`<div class="slot" role="button" tabindex="0" data-rk="${k}"><img class="${v?'':'def'}" alt="" src="${v||BS.defChar(4,RMOOD[k])}"><span>${lb}</span>${v?`<button class="x" data-rkx="${k}" aria-label="지우기">×</button>`:''}</div>`}).join('')}</div></div>
+ <div class="sysrow"><b>결과 화면 캐릭터</b><span class="sub">결과창 오른쪽에서 랭크별 대사를 말하는 캐릭터입니다. 랭크마다 다른 이미지를 넣습니다 (비운 칸은 기본 그림). 투명 배경 PNG 추천.</span>
+  <div class="rslots" style="grid-template-columns:repeat(5,minmax(0,1fr));max-width:520px">${RK.map(([k,lb])=>{const v=S.resultImg&&S.resultImg[k];return`<div class="slot" role="button" tabindex="0" data-rk="${k}"><img class="${v?'':'def'}" alt="" src="${v||BS.defChar(4,RMOOD[k])}"><span>${lb}</span>${v?`<button class="x" data-rkx="${k}" aria-label="지우기">×</button>`:''}</div>`}).join('')}</div></div>
  <div class="sysrow"><b>효과음</b><span class="sub">비워 두면 지금의 기본 소리를 씁니다. 볼륨은 소리마다 0~200%로 조절합니다 (기본 소리에도 적용). 짧은 mp3·ogg·wav 파일을 추천합니다. '결과 점수 올라갈 때'를 넣으면 기본의 '틱틱틱… 띠로롱' 대신 그 소리가 한 번 재생됩니다.</span>
   <div style="display:grid;gap:6px">${BS.SOUND_KEYS.map(([k,lb])=>{const v=S.sounds&&S.sounds[k];return`<div class="row" style="gap:6px"><span style="min-width:150px;font-size:14px">${lb}</span><span class="sub" style="flex:1;min-width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v?'♪ '+esc(v.name||'파일'):'기본 소리'}</span><label class="row sub" style="gap:6px;width:170px">볼륨 <input type="range" data-sdv="${k}" min="0" max="2" step="0.1" value="${(S.soundVol&&S.soundVol[k])??1}" style="width:90px"> <b data-sdvo="${k}" style="min-width:40px;color:var(--ink)">${Math.round(((S.soundVol&&S.soundVol[k])??1)*100)}%</b></label><button data-sdp="${k}" style="min-height:34px;padding:2px 10px">듣기</button><button data-sdf="${k}" style="min-height:34px;padding:2px 10px">파일 선택</button>${v?`<button class="ghost" data-sdx="${k}" style="min-height:34px;padding:2px 10px">기본으로</button>`:''}</div>`}).join('')}</div></div>
  <label class="fld" style="max-width:280px">처음 시작할 때 주는 티켓<input type="number" id="sysTix" min="0" value="${S.startTickets}"><span class="sub">이후로는 곡을 클리어할 때마다 1장씩 받습니다.</span></label>`;

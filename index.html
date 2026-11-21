@@ -423,15 +423,18 @@ function start(){const s=SONGS[idx];if(!s)return;const d=pickDiff(s);if(!has(s,d
  if(L.comic){const sn=seen();sn.add(L.comic.id);LS.set(K+'seen_comics',[...sn]);checkAch()}
  drawComic();
  const t0=performance.now();const tick=setInterval(()=>{const b=$('#lBar');if(b)b.style.width=Math.min(92,(performance.now()-t0)/30)+'%'},100);
- const media=(async()=>{if(!run.mediaSrc)return;await BS.P.load(run.mediaSrc);if(BS.P.isYt()){await BS.P.warm();return}if(BS.vid.readyState<3)await new Promise(r=>{const f=()=>{BS.vid.removeEventListener('canplay',f);r()};BS.vid.addEventListener('canplay',f);setTimeout(f,8000)})})();
- Promise.all([media,new Promise(r=>setTimeout(r,L.comic?2600:1800))]).then(()=>{clearInterval(tick);if(scr!=='load'||L.song!==run)return;L.ready=true;st.className='lst ready';st.textContent='TAP TO START ▶';BS.AU.play('pop',.4)})}
+ L.fail=false;const media=(async()=>{if(!run.mediaSrc)return;BS.mountMedia(document.getElementById('g-bg'));await BS.P.load(run.mediaSrc);if(/^yt:/.test(run.mediaSrc)&&!BS.P.isYt()){L.fail=true;return}if(BS.P.isYt()){await BS.P.warm();return}if(BS.vid.readyState<3)await new Promise(r=>{const f=()=>{BS.vid.removeEventListener('canplay',f);r()};BS.vid.addEventListener('canplay',f);setTimeout(f,8000)})})();
+ Promise.all([media,new Promise(r=>setTimeout(r,L.comic?2600:1800))]).then(()=>{clearInterval(tick);if(scr!=='load'||L.song!==run)return;if(L.fail){st.className='lst ready';st.textContent='유튜브 연결 실패 · 탭해서 다시 시도';return}L.ready=true;st.className='lst ready';st.textContent='TAP TO START ▶';BS.AU.play('pop',.4)})}
+function retryLoad(){const run=L.song,st=$('#lSt');st.className='lst';st.innerHTML='NOW LOADING<div class="bar"><i id="lBar" style="width:60%"></i></div>';
+ (async()=>{BS.mountMedia(document.getElementById('g-bg'));await BS.P.load(run.mediaSrc);if(!BS.P.isYt())L.fail=true;else await BS.P.warm()})().then(()=>{if(scr!=='load'||L.song!==run)return;
+  if(L.fail){st.className='lst ready';st.textContent='유튜브 연결 실패 · 탭해서 다시 시도';return}L.ready=true;st.className='lst ready';st.textContent='TAP TO START ▶';BS.AU.play('pop',.4)})}
 function drawComic(){const c=L.comic,el=$('#lFrame'),s=L.song;
  if(!c){$('#lTag').innerHTML=`NOW LOADING<b>${esc(s.title)}</b>`;el.className='frame blur';el.style.backgroundImage=s.coverSrc?`url("${s.coverSrc}")`:'';el.innerHTML=`<div class="jk2"><div style="${s.coverSrc?`background-image:url('${s.coverSrc}')`:''}">${s.coverSrc?'':esc((s.title||'?')[0])}</div></div>`;return}
  $('#lTag').innerHTML=`LOADING COMIC<b>${esc(c.title)}</b>`;el.className='frame';el.style.backgroundImage='';
  el.innerHTML=`<img src="${c.pages[L.pg]}" alt="${esc(c.title)}">${c.pages.length>1?`${L.pg?'<button class="nav l" id="lPrev" aria-label="이전">‹</button>':''}${L.pg<c.pages.length-1?'<button class="nav r" id="lNext" aria-label="다음">›</button>':''}<span class="pgn">${L.pg+1} / ${c.pages.length}</span>`:''}`;
  const p=$('#lPrev'),n=$('#lNext');if(p)p.onclick=e=>{e.stopPropagation();lGo(-1)};if(n)n.onclick=e=>{e.stopPropagation();lGo(1)}}
 function lGo(d){const c=L.comic;if(!c)return;const n=L.pg+d;if(n<0||n>=c.pages.length)return;L.pg=n;drawComic()}
-$('#load').addEventListener('click',e=>{if(e.target.closest('.nav'))return;if(L.ready)go()});
+$('#load').addEventListener('click',e=>{if(e.target.closest('.nav'))return;if(L.fail&&L.song){L.fail=false;retryLoad();return}if(L.ready)go()});
 function go(){if(!L.ready)return;L.ready=false;const run=L.song;show('sel',true);BS.play(run,{backLabel:'곡 선택',lines:GAMECFG.lines,resultChar:GAMECFG.resultChar,life:GAMECFG.life!==false,
  onResult:r=>{if(r.test)return'';const st=stats();st.plays=(st.plays||0)+1;LS.set(K+'stats',st);const ev={r,song:run,full:team().length>=5&&!!LS.get(K+'useteam',false)};setTimeout(()=>checkAch(ev),1500);if(r.failed)return'';LS.set(K+'tickets',tickets()+1);return'<span class="badge c">티켓 +1</span>'},onExit:()=>{renderList();select(idx);updTixBadges()}})}
 

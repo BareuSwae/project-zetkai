@@ -117,7 +117,7 @@ BS.YTP=host=>({pl:null,id:null,state:-1,err:0,ready:false,
    if(location.protocol==='file:'){this.err=153;fin(false);return}
    const q=new URLSearchParams(Object.assign({enablejsapi:1},pv));const f=document.createElement('iframe');f.setAttribute('referrerpolicy','strict-origin-when-cross-origin');f.setAttribute('allow','autoplay; encrypted-media; picture-in-picture');f.setAttribute('frameborder','0');f.width='100%';f.height='100%';f.title='YouTube';f.src=`https://www.youtube.com/embed/${id}?${q}`;d.replaceWith(f);
    this.pl=new YT.Player(f,{events:{onReady:()=>{this.ready=true;fin(true)},onStateChange:e=>{this.state=e.data},onError:e=>{this.err=e.data||1;fin(false)}}});
-   setTimeout(()=>fin(this.ready),15000)})).catch(()=>false)},
+   setTimeout(()=>fin(this.ready),25000)})).catch(()=>false)},
  kill(){if(this.pl){try{this.pl.destroy()}catch(e){}}this.pl=null;this.ready=false;this.id=null;this.state=-1;this.err=0;host.innerHTML=''},
  t(){try{return this.pl.getCurrentTime()||0}catch(e){return 0}},
  dur(){try{return this.pl.getDuration()||0}catch(e){return 0}},
@@ -131,6 +131,8 @@ BS.YTP=host=>({pl:null,id:null,state:-1,err:0,ready:false,
   await new Promise(r=>{const iv=setInterval(()=>{if((this.state===1&&this.t()>.2)||this.err||performance.now()-t0>12000){clearInterval(iv);r()}},100)});this.pause();this.seek(0);this.mute(false)}});
 const mbox=BS.mediaBox=document.createElement('div');mbox.className='bs-media';mbox.appendChild(vid);
 const ytHost=document.createElement('div');ytHost.className='bs-yt';mbox.appendChild(ytHost);const YTD=BS.YTP(ytHost);
+/* moving an iframe in the page reloads it and cuts the YouTube player loose, so the box is moved only through here and a loaded video is rebuilt afterwards */
+BS.mountMedia=el=>{if(!el||mbox.parentNode===el)return;const yt=P.kind==='yt'&&P.has;el.appendChild(mbox);if(yt)P._remount=true};
 const P=BS.P={has:false,playing:false,base:0,perf:0,rate:1,dur:0,pend:false,src:null,ended:false,kind:'file',ytOff:0,yt:YTD,_hold:false,_lmt:null,
  isYt(){return this.has&&this.kind==='yt'},
  hasVideo(){return this.has&&(this.kind==='yt'||vid.videoWidth>0)},
@@ -139,20 +141,20 @@ const P=BS.P={has:false,playing:false,base:0,perf:0,rate:1,dur:0,pend:false,src:
  mplay(){if(this.kind==='yt'){YTD.rate(this.rate);YTD.play();return Promise.resolve()}vid.playbackRate=this.rate;return vid.play()},
  mpause(){if(this.kind==='yt')YTD.pause();else vid.pause()},
  setVol(v){try{vid.volume=v}catch(e){}if(this.kind==='yt')YTD.vol(v)},
- async load(src){if(src&&src===this.src&&this.has)return;this.unload();if(!src)return;this.src=src;
+ async load(src){if(src&&src===this.src&&this.has&&!this._remount)return false;this.unload();if(!src)return false;this.src=src;
   const m=/^yt:([\w-]{11})@(-?[\d.]+)$/.exec(src);
   if(m){this.kind='yt';this.ytOff=(+m[2]||0)/1000;this.has=true;vid.style.display='none';const ok=await YTD.load(m[1]);
-   if(!ok){BS.toast(YTD.err?BS.ytErrMsg(YTD.err):'유튜브를 불러오지 못했습니다. 인터넷 연결을 확인해 주십시오.');YTD.kill();this.has=false;this.kind='file';vid.style.display='';return}
-   this.dur=Math.max(0,YTD.dur()-this.ytOff);YTD.vol(BS.musicLevel());return}
+   if(!ok){BS.toast(YTD.err?BS.ytErrMsg(YTD.err):'유튜브에 연결하지 못했습니다. 인터넷 연결을 확인해 주십시오.');YTD.kill();this.has=false;this.kind='file';vid.style.display='';this.src=null;return false}
+   this.dur=Math.max(0,YTD.dur()-this.ytOff);YTD.vol(BS.musicLevel());return true}
   this.kind='file';vid.style.display='';vid.src=src;this.has=true;
   await new Promise(res=>{let ok=false;const done=()=>{if(ok)return;ok=true;vid.removeEventListener('loadedmetadata',done);vid.removeEventListener('error',done);res()};vid.addEventListener('loadedmetadata',done);vid.addEventListener('error',done);setTimeout(done,10000)});
-  this.dur=isFinite(vid.duration)?vid.duration:0;if(vid.error){BS.toast('영상/음악 파일을 재생할 수 없습니다 (mp4, webm, mp3 권장)');this.has=false}},
+  this.dur=isFinite(vid.duration)?vid.duration:0;if(vid.error){BS.toast('영상/음악 파일을 재생할 수 없습니다 (mp4, webm, mp3 권장)');this.has=false}return true},
  async warm(){if(this.isYt())await YTD.warm();if(this.isYt()&&!this.dur)this.dur=Math.max(0,YTD.dur()-this.ytOff)},
  setYtOff(ms){ms=Math.round(+ms||0);const t=this.time();this.ytOff=ms/1000;if(this.src&&/^yt:/.test(this.src))this.src=this.src.replace(/@.*$/,'@'+ms);if(this.isYt()){const d=YTD.dur();if(d)this.dur=Math.max(0,d-this.ytOff);if(t>=0)this.mseek(t)}},
- unload(){this.pause();vid.removeAttribute('src');try{vid.load()}catch(e){}YTD.kill();vid.style.display='';this.has=false;this.dur=0;this.src=null;this.kind='file'},
+ unload(){this._remount=false;this.pause();vid.removeAttribute('src');try{vid.load()}catch(e){}YTD.kill();vid.style.display='';this.has=false;this.dur=0;this.src=null;this.kind='file'},
  time(){if(!this.playing)return this.base;const now=performance.now();let t=this.base+(now-this.perf)/1000*this.rate;
   if(this.has){if(this.pend){if(t>=0){this.pend=false;this.mseek(0);this.mplay().catch(()=>{});this.base=0;this.perf=now;t=0}}
-   else if(this.kind==='yt'){const st=YTD.state;if(!this.dur){const d=YTD.dur();if(d)this.dur=Math.max(0,d-this.ytOff)}
+   else if(this.kind==='yt'){const st=YTD.ready?YTD.state:-1;if(!this.dur){const d=YTD.dur();if(d)this.dur=Math.max(0,d-this.ytOff)}
     if(st===0){this.ended=true}
     else if(st===1){if(this._hold){this._hold=false;this.perf=now;t=this.base}const mt=this.mt();
      // the embed reports its time in coarse steps: only trust a fresh value, nudge small drift, snap large drift
@@ -263,8 +265,8 @@ const xOf=(g,lf,s)=>g.cx+(lf/4-.5)*g.hb*s;
 /* song: {id,title,artist,bpm,offset,notes,chars,comboTh,missMs,mediaSrc,bgSrc,coverSrc,diff,level}; opt: {from,test,lines,backLabel,onExit} */
 BS.play=async(song,opt={})=>{AU.init();P.pause();G.running=false;cancelAnimationFrame(G.raf);cancelAnimationFrame(G.rraf);stopConf();hideBubble();clearTimeout(G.ot);
  G.song=song;G.opt=opt;G.active=true;sec.classList.remove('res-on','ending','over','low','leaving','enter');$('#g-res').classList.remove('out');void sec.offsetWidth;sec.classList.add('on','enter');BS.swoosh();
- $('#g-bg').appendChild(mbox);vid.muted=false;P.setVol(BS.musicLevel());
- if(song.mediaSrc)await P.load(song.mediaSrc);else P.unload();
+ BS.mountMedia($('#g-bg'));vid.muted=false;P.setVol(BS.musicLevel());
+ if(song.mediaSrc){const fresh=await P.load(song.mediaSrc);if(fresh&&P.isYt())await P.warm()}else P.unload();
  const hasV=P.hasVideo();mbox.style.display=hasV?'':'none';
  const bg=$('#g-bg');const bgi=!hasV&&(song.bgSrc||song.coverSrc);if(bgi){bg.style.backgroundImage=`url("${bgi}")`;bg.classList.add('img')}else{bg.style.backgroundImage='';bg.classList.remove('img')}
  $('#g-dim').style.opacity=hasV||bgi?SET.bgDim+(bgi&&!hasV?.15:0):0;

@@ -483,7 +483,7 @@ async function loadEdMedia(){const s=E.song,src=mediaOf(s);if(src)await P.load(s
  if(P.isYt()&&P.dur)s.ytDur=Math.round((P.dur+P.ytOff)*10)/10;$('#edPrev').hidden=!P.hasVideo()}
 async function openEditor(song,isNew){AU.init();P.pause();
  E.song=fixSong(cloneSong(song));E.diff=firstDiff(E.song);E.song.notes=E.song.charts[E.diff].notes;E.t=0;E.lastT=0;E.undo=[];E.redo=[];E.dirty=!!isNew;E.pend=[null,null,null,null];E.rec=false;$('#tRec').classList.remove('on');
- show('editor');$('#edPrev').appendChild(BS.mediaBox);vid.muted=false;BS.mediaBox.style.display='';
+ show('editor');BS.mountMedia($('#edPrev'));vid.muted=false;BS.mediaBox.style.display='';
  await loadEdMedia();
  P.setRate(+$('#tRate').value);P.seek(0);drawDiff();setTab(E.tab);updTitle();updPlayBtn();
  cancelAnimationFrame(E.raf);E.raf=requestAnimationFrame(eLoop)}
@@ -491,7 +491,7 @@ function drawDiff(){$('#eDiff').innerHTML=BS.DIFFS.map(d=>`<button data-d="${d.k
 $('#eDiff').onclick=e=>{const b=e.target.closest('[data-d]');if(!b||b.dataset.d===E.diff)return;switchDiff(b.dataset.d)};
 function switchDiff(d){E.song.charts[E.diff].notes=E.song.notes;E.diff=d;E.song.notes=E.song.charts[d].notes;E.undo=[];E.redo=[];E.pend=[null,null,null,null];drawDiff();if(E.tab==='chart')setTab('chart');toast(`${BS.diffInfo(d).n} 채보 편집 중`)}
 $('#eLv').oninput=e=>{E.song.charts[E.diff].level=clamp(+e.target.value||1,1,99);markDirty()};
-function backToEditor(){$('#edPrev').appendChild(BS.mediaBox);BS.mediaBox.style.display='';P.setVol(BS.musicLevel());P.pause();P.setRate(+$('#tRate').value);P.seek(E.t);updPlayBtn();buildPrev();cancelAnimationFrame(E.raf);E.raf=requestAnimationFrame(eLoop)}
+function backToEditor(){BS.mountMedia($('#edPrev'));BS.mediaBox.style.display='';P.setVol(BS.musicLevel());P.pause();if(P._remount)loadEdMedia().then(()=>{P.setRate(+$('#tRate').value);P.seek(E.t)});P.setRate(+$('#tRate').value);P.seek(E.t);updPlayBtn();buildPrev();cancelAnimationFrame(E.raf);E.raf=requestAnimationFrame(eLoop)}
 function markDirty(){E.song.charts[E.diff].notes=E.song.notes;E.dirty=true;updTitle();if(E.tab==='chart')updStats()}
 function updTitle(){$('#eTitle').innerHTML=esc(E.song.title||'제목 없음')+(E.dirty?' <span class="dot">● 저장 안 됨</span>':'')}
 async function saveSong(){if(!slugOk(E.song.slug)){toast('폴더 이름은 영문 소문자·숫자·-·_만 쓸 수 있습니다');setTab('song');return false}E.song.charts[E.diff].notes=E.song.notes;E.song.updated=Date.now();const c=cloneSong(E.song);delete c.notes;await DB.put(fixSong(c));E.dirty=false;updTitle();drawDiff();toast('저장했습니다');return true}

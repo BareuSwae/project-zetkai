@@ -13,7 +13,7 @@ Object.assign(BS,{$,$$,clamp,esc,LS,COARSE,pick});
 /* ---------- constants ---------- */
 BS.DIFFS=[{k:'easy',n:'EASY',c:'#1fb8a6',t:'#fff'},{k:'normal',n:'NORMAL',c:'#f5c518',t:'#2a2200'},{k:'hard',n:'HARD',c:'#9b5de5',t:'#fff'}];
 BS.diffInfo=k=>BS.DIFFS.find(d=>d.k===k)||BS.DIFFS[1];
-BS.VERSION='v23';
+BS.VERSION='v24';
 BS.LINES={S:['캬ㅏㅏㅏ 이게 나야 이게 나야!!','봤습니까 여러분들? 저 리듬게임 잘해요~'],A:['솔직히 이정도면 잘한거죠 인정?','뭐 한두개쯤은 틀릴 수 있는거 아니에요?'],B:['뭐...그럴 수 있죠ㅋㅋ','아 곡이 어려운거임~'],C:['뭐...D는 아니지 않습니까?','아ㅋㅋ오케이 완벽히 깨달았다ㅋㅋ'],D:['사실 리트 하려고 했는데 D랭크는 뭔 말할지 궁금해서 일부러 받은거임~!!']};
 BS.RANKS=[['C',70],['B',80],['A',90],['S',95]];
 /* achievements (names/descriptions can be changed in the developer tool) */
@@ -128,10 +128,18 @@ BS.YTP=host=>({pl:null,id:null,state:-1,err:0,ready:false,
  vol(v){try{this.pl.setVolume(Math.round(Math.max(0,Math.min(1,v))*100));if(v>0)this.pl.unMute()}catch(e){}},
  mute(m){try{m?this.pl.mute():this.pl.unMute()}catch(e){}},
  // play once silently so buffering (and any ad) happens before the song starts
- async warm(){if(!this.ready||this.err)return;this.mute(true);this.play();const t0=performance.now();
-  await new Promise(r=>{const iv=setInterval(()=>{if((this.state===1&&this.t()>.2)||this.err||performance.now()-t0>12000){clearInterval(iv);r()}},100)});this.pause();this.seek(0);this.mute(false)}});
+ // if the video has not started after a moment (usually an ad), cb(true) shows the player so the ad can be skipped
+ async warm(cb){if(!this.ready||this.err)return;this.mute(true);this.play();const t0=performance.now();let shown=false;this.skipWait=false;
+  await new Promise(r=>{const iv=setInterval(()=>{const el=performance.now()-t0;
+   if((this.state===1&&this.t()>.2)||this.err||this.skipWait||el>(shown?90000:12000)){clearInterval(iv);r();return}
+   if(!shown&&el>1500){shown=true;cb&&cb(true)}
+   if(this.state===5||this.state===2)this.play()},100)});
+  if(shown&&cb)cb(false);this.pause();this.seek(0);this.mute(false)}});
 const mbox=BS.mediaBox=document.createElement('div');mbox.className='bs-media';mbox.appendChild(vid);
-const ytHost=document.createElement('div');ytHost.className='bs-yt';mbox.appendChild(ytHost);const YTD=BS.YTP(ytHost);
+const ytHost=document.createElement('div');ytHost.className='bs-yt';mbox.appendChild(ytHost);
+const adNote=document.createElement('div');adNote.className='bs-adnote';adNote.innerHTML='유튜브 영상을 준비하고 있습니다. 광고가 나오면 영상 위의 <b>건너뛰기</b>를 눌러 주십시오.<br>광고가 끝나면 자동으로 계속합니다. <button type="button">기다리지 않고 진행</button>';mbox.appendChild(adNote);
+adNote.querySelector('button').onclick=e=>{e.stopPropagation();YTD.skipWait=true};
+BS.adMode=on=>{mbox.classList.toggle('ad',on);const g=mbox.closest('.g'),e=mbox.closest('.eprev');if(g)g.classList.toggle('adhost',on);if(e)e.classList.toggle('adhost',on)};const YTD=BS.YTP(ytHost);
 /* moving an iframe in the page reloads it and cuts the YouTube player loose, so the box is moved only through here and a loaded video is rebuilt afterwards */
 BS.mountMedia=el=>{if(!el||mbox.parentNode===el)return;const yt=P.kind==='yt'&&P.has;el.appendChild(mbox);if(yt)P._remount=true};
 const P=BS.P={has:false,playing:false,base:0,perf:0,rate:1,dur:0,pend:false,src:null,ended:false,kind:'file',ytOff:0,yt:YTD,_hold:false,_lmt:null,
@@ -150,7 +158,7 @@ const P=BS.P={has:false,playing:false,base:0,perf:0,rate:1,dur:0,pend:false,src:
   this.kind='file';vid.style.display='';vid.src=src;this.has=true;
   await new Promise(res=>{let ok=false;const done=()=>{if(ok)return;ok=true;vid.removeEventListener('loadedmetadata',done);vid.removeEventListener('error',done);res()};vid.addEventListener('loadedmetadata',done);vid.addEventListener('error',done);setTimeout(done,10000)});
   this.dur=isFinite(vid.duration)?vid.duration:0;if(vid.error){BS.toast('영상/음악 파일을 재생할 수 없습니다 (mp4, webm, mp3 권장)');this.has=false}return true},
- async warm(){if(this.isYt())await YTD.warm();if(this.isYt()&&!this.dur)this.dur=Math.max(0,YTD.dur()-this.ytOff)},
+ async warm(){if(this.isYt())await YTD.warm(BS.adMode);if(this.isYt()&&!this.dur)this.dur=Math.max(0,YTD.dur()-this.ytOff)},
  setYtOff(ms){ms=Math.round(+ms||0);const t=this.time();this.ytOff=ms/1000;if(this.src&&/^yt:/.test(this.src))this.src=this.src.replace(/@.*$/,'@'+ms);if(this.isYt()){const d=YTD.dur();if(d)this.dur=Math.max(0,d-this.ytOff);if(t>=0)this.mseek(t)}},
  unload(){this._remount=false;this.pause();vid.removeAttribute('src');try{vid.load()}catch(e){}YTD.kill();vid.style.display='';this.has=false;this.dur=0;this.src=null;this.kind='file'},
  time(){if(!this.playing)return this.base;const now=performance.now();let t=this.base+(now-this.perf)/1000*this.rate;
@@ -206,10 +214,13 @@ const Stage=BS.Stage={
  hop(el,amp=1){const now=performance.now();(el._st||[]).forEach((s,i)=>{const d=i*14+Math.random()*30;if(now+d-s.h0>120){s.h0=now+d;s.amp=amp}})},
  shake(el){const now=performance.now();(el._st||[]).forEach((s,i)=>{if(now-s.sh>380){s.sh=now+i*25;s.sd=Math.random()<.5?-1:1}})},
  flip(el){const now=performance.now();(el._st||[]).forEach((s,i)=>{s.fl=now+i*45;s.h0=now+i*45;s.amp=1.5})},
- tick(el,state){const s=el._song;if(!s)return;const now=performance.now(),kids=el.children;
+ tick(el,state,beat){const s=el._song;if(!s)return;const now=performance.now(),kids=el.children;
+  // groove: a small dip on every beat of the song's BPM
+  const gb=beat!=null&&beat>=0?Math.exp(-(beat%1)*7):0;
   for(let i=0;i<kids.length;i++){const c=s.chars[i],st=el._st[i];if(!c||!st)continue;const im=kids[i].firstChild;const src=BS.charSrc(c,c.__i??i,state);if(im._s!==src){im.src=src;im._s=src}
    const h=kids[i].clientHeight||100;let ty=0,tx=0,sx=1,sy=1;const dt=now-st.h0,D=240;
-   if(dt>=0&&dt<D){const p=dt/D,j=(c.jump??100)/100;ty=-Math.sin(Math.PI*p)*h*.045*st.amp*j;if(p>.8){const q=Math.sin(Math.PI*(p-.8)/.2)*j;sy=1-.03*q*st.amp;sx=1+.02*q*st.amp}}
+   if(dt>=0&&dt<D){const p=dt/D,j=(c.jump??100)/100;ty=-Math.sin(Math.PI*p)*h*.09*st.amp*j;if(p>.8){const q=Math.sin(Math.PI*(p-.8)/.2)*j;sy=1-.03*q*st.amp;sx=1+.02*q*st.amp}}
+   if(gb){ty+=h*.022*gb;sy*=1-.035*gb;sx*=1+.025*gb}
    let rot=0;const ds=now-st.sh,DS=560;if(ds>=0&&ds<DS){const p=ds/DS,k=Math.sin(Math.PI*Math.min(1,p*1.6))*(1-p);rot=st.sd*16*k;ty+=h*.03*k;sy*=1-.05*k;tx=st.sd*h*.02*k}
    const df=now-st.fl,DF=480;if(df>=0&&df<DF){const p=df/DF,e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;sx*=Math.cos(e*Math.PI*2)}
    if(c.flip)sx*=-1;im.style.transform=`translate(${tx.toFixed(1)}px,${ty.toFixed(1)}px) rotate(${rot.toFixed(2)}deg) scale(${sx.toFixed(3)},${sy.toFixed(3)})`}}
@@ -292,7 +303,7 @@ function loop(){if(!G.running)return;G.raf=requestAnimationFrame(loop);
  const t=P.time()*1000-SET.offset;G.t=t;
  if(!G.paused&&!G.finished)update(t);
  render(t);
- Stage.tick(stEl,performance.now()<G.missUntil?'miss':G.combo>=G.song.comboTh?'combo':'idle');
+ Stage.tick(stEl,performance.now()<G.missUntil?'miss':G.combo>=G.song.comboTh?'combo':'idle',G.running&&!G.paused&&!G.finished&&G.t>=G.song.offset?(G.t-G.song.offset)/BS.bms(G.song):null);
  $('#g-prog').style.width=clamp((t-G.start*1000)/(G.endMs-G.start*1000),0,1)*100+'%'}
 
 function update(t){for(let l=0;l<4;l++){const a=G.lanes[l];let p=G.ptr[l];

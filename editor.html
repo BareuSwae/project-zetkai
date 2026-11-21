@@ -257,6 +257,7 @@ function newSong(){return Object.assign(BS.normSong({}),{id:uid(),slug:'song-'+M
 const urlCache=new WeakMap();
 const blobURL=b=>{if(!b)return null;let u=urlCache.get(b);if(!u){u=URL.createObjectURL(b);urlCache.set(b,u)}return u};
 const firstDiff=s=>s.charts.normal.notes.length?'normal':DK.find(k=>s.charts[k].notes.length)||'normal';
+function ytWarn(){const m=BS.modal(`<h3>유튜브 사용 안내</h3><p style="line-height:1.7;margin:4px 0 0">해당 기능을 사용 시 유튜브 광고가 나올 수 있으니, 곡의 채보 작성을 위한 참고 기능으로 사용하는것을 권장합니다. 웬만하면 영상 파일을 선택하여 사용하는 것을 권장합니다.</p><div class="mbtns"><button class="pri" id="ytWOk">확인</button></div>`);$('#ytWOk').onclick=BS.closeModal}
 const useYt=s=>s.src==='yt'&&!!BS.ytId(s.yt);
 const mediaOf=s=>useYt(s)?BS.ytSrc(BS.ytId(s.yt),s.ytOff):s.media?blobURL(s.media):null;
 function runtime(s,d){const c=s.charts[d];return Object.assign({},s,{id:s.slug,diff:d,level:c.level,notes:c.notes,mediaSrc:mediaOf(s),bgSrc:s.bg,coverSrc:s.cover})}
@@ -482,6 +483,7 @@ const songLen=()=>P.has&&P.dur?P.dur:(+E.song.length||90);
 const b2s=b=>BS.b2ms(E.song,b)/1000,s2b=sec=>(sec*1000-E.song.offset)/BS.bms(E.song),snap=b=>Math.round(b*E.div)/E.div;
 const LC=BS.LC;
 async function loadEdMedia(){const s=E.song,src=mediaOf(s);if(src)await P.load(src);else P.unload();P.setVol(BS.musicLevel());
+ if(P.isYt())await P.warm();
  if(P.isYt()&&P.dur)s.ytDur=Math.round((P.dur+P.ytOff)*10)/10;$('#edPrev').hidden=!P.hasVideo()}
 async function openEditor(song,isNew){AU.init();P.pause();
  E.song=fixSong(cloneSong(song));E.diff=firstDiff(E.song);E.song.notes=E.song.charts[E.diff].notes;E.t=0;E.lastT=0;E.undo=[];E.redo=[];E.dirty=!!isNew;E.pend=[null,null,null,null];E.rec=false;$('#tRec').classList.remove('on');
@@ -523,7 +525,7 @@ function eLoop(){if(cur!=='editor')return;E.raf=requestAnimationFrame(eLoop);if(
    if(E.metro){const bm=BS.bms(s),ba=Math.floor((a-s.offset)/bm),bb=Math.floor((b-s.offset)/bm);if(bb>ba&&bb>=0)AU.play(bb%4===0?'hi':'tick',.55)}}
   E.t=nt;E.lastT=nt;if((P.has&&P.ended)||E.t>=songLen()){P.pause();E.t=Math.min(E.t,songLen());P.seek(E.t);updPlayBtn()}}
  eDraw();const b=s2b(E.t);$('#tTime').innerHTML=`<b>${fmt(E.t)}</b> · ${b>=0?`${Math.floor(b/4)+1}마디 ${Math.floor(b%4)+1}박`:'첫 박 전'}`;
- const ps=$('#prevStage');if(ps)Stage.tick(ps,E.pv)}
+ const ps=$('#prevStage');if(ps)Stage.tick(ps,E.pv,P.playing?(E.t*1000-E.song.offset)/BS.bms(E.song):null)}
 function fmt(t){t=Math.max(0,t);const m=Math.floor(t/60),s=t-m*60;return`${m}:${s.toFixed(3).padStart(6,'0')}`}
 function gcd(a,b){return b?gcd(b,a%b):a}
 function eDraw(){const[W,H]=BS.fit(ec,ex);const s=E.song;const gut=64,lanesW=Math.min(W-gut-12,400),x0=gut+(W-gut-12-lanesW)/2,lw=lanesW/4,py=Math.round(H*.8);E.geo={x0,lw,lanesW,py};
@@ -609,7 +611,7 @@ function setTab(t){E.tab=t;$$('#tabs button').forEach(b=>b.classList.toggle('on'
   const mx=$('#fMediaX');if(mx)mx.onclick=async()=>{s.media=null;s.mediaName='';P.pause();await loadEdMedia();markDirty();setTab('song')};
   const reMedia=async()=>{const t=E.t;P.pause();await loadEdMedia();seekEd(Math.min(t,songLen()));updPlayBtn();setTab('song')};
   $('#fYt').onchange=async e=>{const v=e.target.value.trim(),id=BS.ytId(v);if(v&&!id){$('#fYtMsg').textContent='유튜브 링크를 알아볼 수 없습니다. 주소를 다시 확인해 주십시오.';return}
-   s.yt=id||'';s.ytDur=0;if(!id&&s.src==='yt')s.src='file';else if(id&&!s.media)s.src='yt';markDirty();await reMedia()};
+   if(id&&id!==s.yt)ytWarn();s.yt=id||'';s.ytDur=0;if(!id&&s.src==='yt')s.src='file';else if(id&&!s.media)s.src='yt';markDirty();await reMedia()};
   tb.querySelectorAll('[name=fSrc]').forEach(r=>r.onchange=async()=>{s.src=r.value;markDirty();await reMedia()});
   const setYo=v=>{s.ytOff=Math.round(+v||0);$('#fYtOff').value=s.ytOff;if(P.isYt())P.setYtOff(s.ytOff);markDirty()};
   $('#fYtOff').onchange=e=>setYo(e.target.value);tb.querySelectorAll('[data-yo]').forEach(b=>b.onclick=()=>setYo((+s.ytOff||0)+ +b.dataset.yo));

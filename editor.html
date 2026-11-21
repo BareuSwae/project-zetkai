@@ -252,8 +252,13 @@ function updBrand(){$('#hTitle').textContent=GAME.title||'제목 없는 게임';
 
 /* ---------- song model ---------- */
 const slugOk=s=>/^[a-z0-9][a-z0-9_-]{0,40}$/.test(s);
-function fixSong(s){const n=BS.normSong(s);delete s.notes;delete s.level;return Object.assign(s,n)}
-function newSong(){return Object.assign(BS.normSong({}),{id:uid(),slug:'song-'+Math.random().toString(36).slice(2,6),media:null,mediaName:'',mediaType:'',cover:null,bg:null,include:true,order:Date.now(),updated:Date.now()})}
+function fixSong(s){const n=BS.normSong(s);delete s.notes;delete s.level;Object.assign(s,n);if(s.slugIn===undefined)s.slugIn=/^song-[a-z0-9]{4}$/.test(s.slug||'')?'':(s.slug||'');return s}
+/* folder name: what the author typed (slugIn), or else the title (Hangul romanized; other scripts → left empty) */
+const RR_I=['g','kk','n','d','tt','r','m','b','pp','s','ss','','j','jj','ch','k','t','p','h'],RR_V=['a','ae','ya','yae','eo','e','yeo','ye','o','wa','wae','oe','yo','u','wo','we','wi','yu','eu','ui','i'],RR_F=['','k','k','k','n','n','n','t','l','k','m','l','l','l','p','l','m','p','p','t','t','ng','t','t','k','t','p','t'];
+function romanize(t){let o='';for(const ch of String(t||'')){const c=ch.codePointAt(0);if(c>=0xAC00&&c<=0xD7A3){const k=c-0xAC00;o+=RR_I[Math.floor(k/588)]+RR_V[Math.floor(k%588/28)]+RR_F[k%28]}else if(/[a-z0-9]/i.test(ch))o+=ch.toLowerCase();else if(/\p{L}/u.test(ch)&&!/[\u3131-\u318E]/.test(ch))return'';else o+='-'}
+ return o.replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,40).replace(/-$/,'')}
+function slugFor(s){const want=(s.slugIn||'').trim();if(want)return want;const base=romanize(s.title);if(!base)return'';let v=base,n=2;while(LIB.some(x=>x.id!==s.id&&x.slug===v))v=base+'-'+(n++);return v}
+function newSong(){return Object.assign(BS.normSong({}),{id:uid(),slug:'',slugIn:'',media:null,mediaName:'',mediaType:'',cover:null,bg:null,include:true,order:Date.now(),updated:Date.now()})}
 const urlCache=new WeakMap();
 const blobURL=b=>{if(!b)return null;let u=urlCache.get(b);if(!u){u=URL.createObjectURL(b);urlCache.set(b,u)}return u};
 const firstDiff=s=>s.charts.normal.notes.length?'normal':DK.find(k=>s.charts[k].notes.length)||'normal';
@@ -282,7 +287,7 @@ async function renderHome(){LIB=(await DB.all()).map(fixSong).sort((a,b)=>(a.ord
  $('#songList').innerHTML=LIB.length?LIB.map((s,i)=>`<div class="srow ${s.include===false?'off':''}" data-id="${esc(s.id)}">
   <div class="ord"><button data-a="up" ${i?'':'disabled'} aria-label="위로">▲</button><button data-a="down" ${i<LIB.length-1?'':'disabled'} aria-label="아래로">▼</button></div>
   <div class="cv" style="${s.cover?`background-image:url('${s.cover}')`:''}">${s.cover?'':esc((s.title||'?')[0])}</div>
-  <div><h3>${esc(s.title)}</h3><p class="meta">${esc(s.artist||'아티스트 미정')} · BPM ${s.bpm} · <span class="mono">songs/${esc(s.slug)}</span></p>
+  <div><h3>${esc(s.title)}</h3><p class="meta">${esc(s.artist||'아티스트 미정')} · BPM ${s.bpm} · <span class="mono">songs/${esc(s.slug||'(폴더 이름 없음)')}</span></p>
   <div class="tags">${BS.DIFFS.map(d=>{const c=s.charts[d.k];return`<span class="d ${c.notes.length?'':'z'}" style="--dc:${d.c};--dt:${d.t}">${d.n} ${c.level} · ${c.notes.length}</span>`}).join('')}<span>캐릭터 ${s.chars.length}</span>${useYt(s)?'<span class="ok">▶ 유튜브</span>':s.media?`<span class="ok">${esc(s.mediaName||'미디어')}</span>`:'<span class="warn">영상/음악 없음</span>'}</div></div>
   <div class="acts"><label class="chk"><input type="checkbox" data-a="inc" ${s.include!==false?'checked':''}> 빌드 포함</label><button class="pri" data-a="edit">편집</button><button data-a="test">테스트</button><button data-a="share" title="이 곡만 zip으로 내보내기">공유</button><button class="ghost danger" data-a="del">삭제</button></div></div>`).join(''):'<div class="empty">아직 수록곡이 없습니다. \'새 곡 추가\'로 시작하거나 예전에 빌드한 zip을 불러오십시오.</div>';
  ROS=(await DB.all('roster')).sort((a,b)=>(a.order||0)-(b.order||0));SYS=Object.assign(newSys(),(await DB.all('system')).find(x=>x.id==='sys')||{});renderRoster();renderSys();applySounds();
@@ -296,8 +301,8 @@ $('#songList').addEventListener('click',async e=>{const b=e.target.closest('[dat
  else if(a==='up'||a==='down'){const i=LIB.indexOf(s),j=a==='up'?i-1:i+1;if(!LIB[j])return;[LIB[i],LIB[j]]=[LIB[j],LIB[i]];for(let k=0;k<LIB.length;k++){LIB[k].order=k;await DB.put(LIB[k])}renderHome()}});
 $('#songList').addEventListener('change',async e=>{const c=e.target.closest('[data-a=inc]');if(!c)return;const s=LIB.find(x=>x.id===c.closest('.srow').dataset.id);s.include=c.checked;await DB.put(s);renderHome()});
 $('#hNew').onclick=()=>{const s=newSong();s.order=LIB.length;openEditor(s,true)};
-$('#hDemo').onclick=async()=>{const s=newSong();Object.assign(s,{title:'데모 스테이지',artist:'프로젝트 젯카이',slug:'demo',bpm:128,offset:1500,length:1.5+88*60/128,charts:demoCharts(),order:LIB.length});s.chars=[0,1,2].map(i=>BS.newChar(i));s.chars[1].size=110;
- if(LIB.some(x=>x.slug==='demo'))s.slug='demo-'+Math.random().toString(36).slice(2,5);await DB.put(s);renderHome();toast('데모 채보(3개 난이도)를 추가했습니다. 음악 없이 메트로놈으로 재생됩니다.')};
+$('#hDemo').onclick=async()=>{const s=newSong();Object.assign(s,{title:'데모 스테이지',artist:'프로젝트 젯카이',slug:'demo',slugIn:'demo',bpm:128,offset:1500,length:1.5+88*60/128,charts:demoCharts(),order:LIB.length});s.chars=[0,1,2].map(i=>BS.newChar(i));s.chars[1].size=110;
+ if(LIB.some(x=>x.slug==='demo')){let k=2;while(LIB.some(x=>x.slug==='demo-'+k))k++;s.slug=s.slugIn='demo-'+k}await DB.put(s);renderHome();toast('데모 채보(3개 난이도)를 추가했습니다. 음악 없이 메트로놈으로 재생됩니다.')};
 
 /* ---------- game settings + rank lines ---------- */
 $('#hGame').onclick=()=>{const L=gameLines();BS.modal(`<h3>게임 설정 · 대사</h3>
@@ -427,7 +432,7 @@ $('#hBuild').onclick=()=>{if(!LIB.length){toast('빌드할 곡이 없습니다')
  <div class="prog2"><i id="bProg"></i></div><p class="sub" id="bMsg">영상이 크면 몇 초 걸릴 수 있습니다.</p>
  <div class="mbtns"><button class="ghost" id="bNo">닫기</button><button class="pri" id="bGo">빌드 시작</button></div>`);
  $('#bNo').onclick=BS.closeModal;$('#bGo').onclick=async()=>{const ids=$$('[data-b]').filter(c=>c.checked).map(c=>c.dataset.b);const songs=LIB.filter(s=>ids.includes(s.id));if(!songs.length){toast('곡을 하나 이상 골라 주십시오');return}
-  const slugs=songs.map(s=>s.slug),dup=slugs.find((x,i)=>slugs.indexOf(x)!==i);if(dup){toast(`폴더 이름 '${dup}'이 겹칩니다. 곡 정보에서 바꿔 주십시오.`);return}
+  const noSlug=songs.find(s=>!s.slug);if(noSlug){toast(`'${noSlug.title}' 곡의 폴더 이름이 비어 있습니다. 곡 정보에서 넣어 주십시오.`);return}const slugs=songs.map(s=>s.slug),dup=slugs.find((x,i)=>slugs.indexOf(x)!==i);if(dup){toast(`폴더 이름 '${dup}'이 겹칩니다. 곡 정보에서 바꿔 주십시오.`);return}
   $('#bGo').disabled=true;try{const full=$('#bFull').checked;const blob=await build(songs,full,(p,m)=>{$('#bProg').style.width=p*100+'%';$('#bMsg').textContent=m});
    $('#bMsg').textContent=`완성: ${(blob.size/1048576).toFixed(1)} MB`;await saveFile((full?'project-zetkai-game':'songs')+'.zip',blob)}catch(e){console.error(e);toast('빌드 중 문제가 생겼습니다: '+e.message)}finally{const g=$('#bGo');if(g)g.disabled=false}}};
 function songFiles(s,dir,share){const files=[];
@@ -437,7 +442,7 @@ function songFiles(s,dir,share){const files=[];
   for(const k of ['cover','bg'])if(s[k]){const b=dataURLToBlob(s[k]);const n=`${k}.${extOfMime(b.type)}`;out[k]=n;files.push({name:dir+n,data:b})}
   s.chars.forEach((c,ci)=>{const oc={name:c.name,jump:c.jump,size:c.size,flip:!!c.flip,img:{}};for(const st of ['idle','combo','miss'])if(c.img[st]){const b=dataURLToBlob(c.img[st]);const n=`c${ci+1}_${st}.${extOfMime(b.type)}`;oc.img[st]=n;files.push({name:dir+n,data:b})}out.chars.push(oc)});
   files.push({name:dir+'chart.js',data:`/* 프로젝트 젯카이 채보 — 개발자 도구로 생성 */\nBEAT_SONG(${JSON.stringify(out)});\n`});return files}
-async function shareSong(s){toast('공유용 파일을 만드는 중…');try{const z=await BS.zip(songFiles(s,`songs/${s.slug}/`,true));await saveFile(`${s.slug}.zetkai-song.zip`,z)}catch(e){toast('만들지 못했습니다: '+e.message)}}
+async function shareSong(s){if(!s.slug){toast('폴더 이름이 비어 있습니다. 곡 정보에서 넣어 주십시오');return}toast('공유용 파일을 만드는 중…');try{const z=await BS.zip(songFiles(s,`songs/${s.slug}/`,true));await saveFile(`${s.slug}.zetkai-song.zip`,z)}catch(e){toast('만들지 못했습니다: '+e.message)}}
 async function build(songs,full,prog){const files=[],root=full?'project-zetkai/':'';
  for(let i=0;i<songs.length;i++){const s=songs[i];prog(i/songs.length*.85,`${s.title} 담는 중…`);files.push(...songFiles(s,`${root}songs/${s.slug}/`))}
  prog(.87,'만화 담는 중…');const comics=[];COM.filter(c=>c.include!==false&&c.pages.length).forEach((c,ci)=>{const pages=c.pages.map((p,pi)=>{const b=dataURLToBlob(p);const n=`comics/${ci+1}_${pi+1}.${extOfMime(b.type)}`;files.push({name:`${root}songs/${n}`,data:b});return n});comics.push({id:c.id,title:c.title,desc:c.desc||'',pages})});
@@ -467,12 +472,12 @@ $('#hImport').onclick=async()=>{const f=await pickFile('.zip,application/zip');i
     if(pages.length){const ex=COM.find(x=>x.id===c.id);await DB.put({id:c.id||uid(),title:c.title||'',desc:c.desc||'',pages,include:true,order:ex?ex.order:COM.length+cm.indexOf(c)},'comics')}}}
   const charts=names.filter(n=>/(^|\/)songs\/[^/]+\/chart\.js$/.test(n));let n=0;const base=LIB.length;
   for(const cpath of charts){const dir=cpath.replace(/chart\.js$/,''),slug=dir.split('/').slice(-2)[0];const t=await (await z[cpath]()).text();const d=JSON.parse(t.slice(t.indexOf('(')+1,t.lastIndexOf(')')));
-   const s=newSong();Object.assign(s,BS.normSong(d));s.slug=slug;s.order=base+(order.includes(slug)?order.indexOf(slug):100+n);
+   const s=newSong();Object.assign(s,BS.normSong(d));s.slug=slug;s.slugIn=slug;s.order=base+(order.includes(slug)?order.indexOf(slug):100+n);
    const file=async p=>{if(!p||!z[dir+p])return null;const b=await z[dir+p]();return new Blob([b],{type:MIME[extOf(p)]||'application/octet-stream'})};
    if(d.media){const b=await file(d.media);if(b){s.media=b;s.mediaName=d.media;s.mediaType=b.type}}
    for(const k of ['cover','bg']){const b=await file(d[k]);s[k]=b?await blobToDataURL(b):null}
    for(const c of s.chars)for(const st of ['idle','combo','miss']){const b=await file(c.img[st]);c.img[st]=b?await blobToDataURL(b):null}
-   const ex=LIB.find(x=>x.slug===slug);if(ex&&await BS.confirm(`'${slug}' 폴더의 곡이 이미 있습니다. 덮어쓰시겠습니까?`,'덮어쓰기')){s.id=ex.id;s.order=ex.order}else if(ex)s.slug=slug+'-'+Math.random().toString(36).slice(2,5);
+   const ex=LIB.find(x=>x.slug===slug);if(ex&&await BS.confirm(`'${slug}' 폴더의 곡이 이미 있습니다. 덮어쓰시겠습니까?`,'덮어쓰기')){s.id=ex.id;s.order=ex.order}else if(ex){let k=2;while(LIB.some(x=>x.slug===slug+'-'+k))k++;s.slug=s.slugIn=slug+'-'+k}
    await DB.put(s);n++}
   await renderHome();toast(`${n}곡을 불러왔습니다`)}catch(e){console.error(e);toast('불러오지 못했습니다: '+e.message)}};
 
@@ -498,7 +503,7 @@ $('#eLv').oninput=e=>{E.song.charts[E.diff].level=clamp(+e.target.value||1,1,99)
 function backToEditor(){BS.mountMedia($('#edPrev'));BS.mediaBox.style.display='';P.setVol(BS.musicLevel());P.pause();if(P._remount)loadEdMedia().then(()=>{P.setRate(+$('#tRate').value);P.seek(E.t)});P.setRate(+$('#tRate').value);P.seek(E.t);updPlayBtn();buildPrev();cancelAnimationFrame(E.raf);E.raf=requestAnimationFrame(eLoop)}
 function markDirty(){E.song.charts[E.diff].notes=E.song.notes;E.dirty=true;updTitle();if(E.tab==='chart')updStats()}
 function updTitle(){$('#eTitle').innerHTML=esc(E.song.title||'제목 없음')+(E.dirty?' <span class="dot">● 저장 안 됨</span>':'')}
-async function saveSong(){if(!slugOk(E.song.slug)){toast('폴더 이름은 영문 소문자·숫자·-·_만 쓸 수 있습니다');setTab('song');return false}E.song.charts[E.diff].notes=E.song.notes;E.song.updated=Date.now();const c=cloneSong(E.song);delete c.notes;await DB.put(fixSong(c));E.dirty=false;updTitle();drawDiff();toast('저장했습니다');return true}
+async function saveSong(){if(E.song.slugIn&&!slugOk(E.song.slugIn)){toast('폴더 이름은 영문 소문자·숫자·-·_만 쓸 수 있습니다');setTab('song');return false}E.song.slug=slugFor(E.song);if(!E.song.slug)toast('폴더 이름이 비어 있습니다. 빌드하기 전에 곡 정보에서 넣어 주십시오');E.song.charts[E.diff].notes=E.song.notes;E.song.updated=Date.now();const c=cloneSong(E.song);delete c.notes;await DB.put(fixSong(c));E.dirty=false;updTitle();drawDiff();toast('저장했습니다');return true}
 $('#eSave').onclick=saveSong;
 $('#eBack').onclick=async()=>{P.pause();if(E.dirty){const ok=await saveSong();if(!ok)return}cancelAnimationFrame(E.raf);P.unload();show('home');renderHome()};
 const test=from=>{P.pause();E.song.charts[E.diff].notes=E.song.notes;if(!E.song.notes.length){toast('이 난이도는 아직 노트가 없습니다');return}BS.play(runtime(E.song,E.diff),{from,test:true,lines:gameLines(),life:GAME.life!==false,resultChar:(SYS&&SYS.resultImg)||{},backLabel:'에디터로',onExit:backToEditor})};
@@ -574,16 +579,25 @@ function recUp(l){const p=E.pend[l];if(!p)return;E.pend[l]=null;if(E.t-p.t<.2)re
 $('#tabs').onclick=e=>{const b=e.target.closest('[data-t]');if(b)setTab(b.dataset.t)};
 function bindIn(sel,f){const el=$(sel);if(el)el.addEventListener('input',e=>{f(e.target.value,e.target);markDirty()})}
 function imgPick(key,label,hint){const s=E.song;return`<div class="imgpick"><div class="cv" role="button" tabindex="0" data-img="${key}" style="${s[key]?`background-image:url('${s[key]}')`:''}">${s[key]?'':'+'}</div><div><b style="font-size:14px">${label}</b><p class="sub">${hint}</p>${s[key]?`<button class="ghost" data-imgx="${key}" style="min-height:32px;padding:2px 10px;margin-top:4px">제거</button>`:''}</div></div>`}
+const beatHTML=s=>`<h4 style="margin-top:0">박자</h4>
+ <div class="row"><label class="fld">BPM<input type="number" id="fBpm" step="0.01" min="20" max="999" value="${s.bpm}"></label><label class="fld">첫 박 위치 (ms)<input type="number" id="fOff" step="1" value="${Math.round(s.offset)}"></label></div>
+ <div class="row"><button id="fOffHere">지금 위치를 첫 박으로</button><button id="fTap">탭해서 BPM 찾기</button></div>
+ <p class="sub" id="fTapOut">노래를 재생하면서 '탭' 버튼을 박자에 맞춰 8번 이상 눌러 보십시오.</p>
+ <p class="sub">BPM과 첫 박은 세 난이도가 함께 씁니다. 바꾸면 이미 찍은 노트도 박자 기준으로 같이 움직입니다. 타임라인의 노란 눈금이 첫 박입니다.</p>`;
+function bindBeat(s){bindIn('#fBpm',v=>{if(+v>=20)s.bpm=+v});bindIn('#fOff',v=>s.offset=+v||0);
+  $('#fOffHere').onclick=()=>{s.offset=Math.round(E.t*1000);$('#fOff').value=s.offset;markDirty();toast('첫 박을 '+fmt(E.t)+'로 맞췄습니다')};
+  $('#fTap').onclick=()=>{AU.init();AU.play('tick',.5);const n=performance.now();if(E.taps.length&&n-E.taps[E.taps.length-1]>2000)E.taps=[];E.taps.push(n);if(E.taps.length>16)E.taps.shift();
+   if(E.taps.length>=4){const iv=(E.taps[E.taps.length-1]-E.taps[0])/(E.taps.length-1),bpm=Math.round(60000/iv*10)/10;$('#fTapOut').innerHTML=`측정값 <b>${bpm}</b> BPM (${E.taps.length}번 탭) · <button id="fTapUse" style="min-height:32px;padding:2px 10px">적용</button>`;$('#fTapUse').onclick=()=>{s.bpm=Math.round(bpm);$('#fBpm').value=s.bpm;markDirty()}}else $('#fTapOut').textContent=`${E.taps.length}번… 계속 눌러 주십시오`}}
 function setTab(t){E.tab=t;$$('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));const tb=$('#tbody'),s=E.song;
  if(t==='song'){tb.innerHTML=`
  <label class="fld">곡 제목<input type="text" id="fTitle" value="${esc(s.title)}"></label>
  <label class="fld">아티스트<input type="text" id="fArt" value="${esc(s.artist)}"></label>
- <label class="fld">폴더 이름 (영문)<input type="text" id="fSlug" value="${esc(s.slug)}" autocapitalize="off" spellcheck="false"><span class="sub" id="fSlugMsg">빌드하면 songs/${esc(s.slug)}/ 에 들어갑니다. 기록 저장 키로도 쓰여서 출시 후엔 바꾸지 않는 게 좋습니다.</span></label>
+ <label class="fld">폴더 이름 (영문)<input type="text" id="fSlug" value="${esc(s.slugIn||'')}" placeholder="${esc(romanize(s.title)||'비워 두면 곡 제목을 따라갑니다')}" autocapitalize="off" spellcheck="false"><span class="sub" id="fSlugMsg"></span></label>
  <h4>영상 / 음악</h4>
  <div class="file"><button id="fMedia" class="pri">파일 선택</button>${s.media?'<button id="fMediaX" class="ghost">제거</button>':''}<span class="nm">${s.media?esc(s.mediaName||'연결됨')+(P.dur?` · ${fmt(P.dur)}`:''):'아직 없음 — mp4, webm, mp3, ogg 등'}</span></div>
  <h4>유튜브</h4>
  <label class="fld">유튜브 링크<input type="text" id="fYt" value="${esc(s.yt||'')}" placeholder="https://www.youtube.com/watch?v=… 또는 youtu.be/…" autocapitalize="off" spellcheck="false"><span class="sub" id="fYtMsg">${BS.ytId(s.yt)?'영상 ID: '+esc(BS.ytId(s.yt))+(s.ytDur?' · '+fmt(s.ytDur):''):'영상을 내려받지 않고 유튜브 플레이어로 재생합니다. 인터넷 연결이 필요합니다.'}</span></label>
- <div class="fld">플레이에 쓸 소스<div class="row" style="gap:16px"><label class="chk"><input type="radio" name="fSrc" value="file" ${useYt(s)?'':'checked'}> 파일</label><label class="chk"><input type="radio" name="fSrc" value="yt" ${useYt(s)?'checked':''} ${BS.ytId(s.yt)?'':'disabled'}> 유튜브</label></div></div>
+ <div class="fld">플레이에 쓸 소스<div class="row" style="gap:16px"><label class="chk"><input type="radio" name="fSrc" value="file" ${useYt(s)?'':'checked'}> 파일</label><label class="chk"><input type="radio" name="fSrc" value="yt" ${useYt(s)?'checked':''}> 유튜브</label></div></div>
  <label class="fld">유튜브 보정 (ms)<input type="number" id="fYtOff" step="1" value="${Math.round(+s.ytOff||0)}"></label>
  <div class="row" style="gap:6px">${[-50,-10,10,50].map(v=>`<button data-yo="${v}" style="min-height:34px;padding:2px 10px">${v>0?'+':''}${v}</button>`).join('')}</div>
  <p class="sub">채보는 파일 기준 그대로 두고, 유튜브 쪽만 이만큼 밀어서 맞춥니다. 소스를 '유튜브'로 두고 재생하면서 조절하면 바로 반영됩니다. <b>노트가 음악보다 먼저 오면 값을 올리고, 늦게 오면 내리십시오.</b> (유튜브 영상 앞에 인트로가 0.3초 더 있으면 +300)</p>
@@ -597,30 +611,29 @@ function setTab(t){E.tab=t;$$('#tabs button').forEach(b=>b.classList.toggle('on'
  <label class="chk"><input type="checkbox" id="fAchOff" ${s.achOff?'checked':''}> 이 곡은 업적 만들지 않기</label>
  <h4>이미지</h4>
  ${imgPick('cover','커버 (재킷)','곡 선택·로딩·결과 화면에 나옵니다. 정사각형 추천')}
- ${imgPick('bg','배경 이미지','영상이 없는 곡(음악만)일 때 게임 배경')}
- <h4>박자</h4>
- <div class="row"><label class="fld">BPM<input type="number" id="fBpm" step="0.01" min="20" max="999" value="${s.bpm}"></label><label class="fld">첫 박 위치 (ms)<input type="number" id="fOff" step="1" value="${Math.round(s.offset)}"></label></div>
- <div class="row"><button id="fOffHere">지금 위치를 첫 박으로</button><button id="fTap">탭해서 BPM 찾기</button></div>
- <p class="sub" id="fTapOut">노래를 재생하면서 '탭' 버튼을 박자에 맞춰 8번 이상 눌러 보십시오.</p>
- <p class="sub">BPM과 첫 박은 세 난이도가 함께 씁니다. 바꾸면 이미 찍은 노트도 박자 기준으로 같이 움직입니다. 타임라인의 노란 눈금이 첫 박입니다.</p>`;
-  bindIn('#fTitle',v=>{s.title=v;updTitle()});bindIn('#fArt',v=>s.artist=v);bindIn('#fAchN',v=>s.achName=v.trim());bindIn('#fAchD',v=>s.achDesc=v.trim());{const ao=$('#fAchOff');ao.onchange=()=>{s.achOff=ao.checked;markDirty()}}bindIn('#fLen',v=>s.length=Math.max(5,+v||90));
-  bindIn('#fSlug',(v,el)=>{const ok=slugOk(v);el.style.borderColor=ok?'':'#ff7fbf';$('#fSlugMsg').textContent=ok?`빌드하면 songs/${v}/ 에 들어갑니다.`:'영문 소문자, 숫자, -, _ 만 쓸 수 있습니다.';s.slug=v});
-  bindIn('#fPrev',v=>s.previewStart=Math.max(0,+v||0));bindIn('#fBpm',v=>{if(+v>=20)s.bpm=+v});bindIn('#fOff',v=>s.offset=+v||0);
+ ${imgPick('bg','배경 이미지','영상이 없는 곡(음악만)일 때 게임 배경')}`;
+  bindIn('#fTitle',v=>{s.title=v;updTitle();if(!s.slugIn)s.slug=slugFor(s);slugMsg()});bindIn('#fArt',v=>s.artist=v);bindIn('#fAchN',v=>s.achName=v.trim());bindIn('#fAchD',v=>s.achDesc=v.trim());{const ao=$('#fAchOff');ao.onchange=()=>{s.achOff=ao.checked;markDirty()}}bindIn('#fLen',v=>s.length=Math.max(5,+v||90));
+  const slugMsg=()=>{const el=$('#fSlug'),m=$('#fSlugMsg');if(!el||!m)return;const v=el.value.trim();if(v&&!slugOk(v)){el.style.borderColor='#ff7fbf';m.textContent='영문 소문자, 숫자, -, _ 만 쓸 수 있습니다.';return}el.style.borderColor='';
+   const eff=slugFor(s);el.placeholder=romanize(s.title)||'비워 두면 곡 제목을 따라갑니다';m.textContent=eff?`빌드하면 songs/${eff}/ 에 들어갑니다.${v?'':' (곡 제목에서 자동)'} 기록 저장 키로도 쓰여서 출시 후엔 바꾸지 않는 게 좋습니다.`:'곡 제목을 영문으로 바꿀 수 없어서 비어 있습니다. 빌드하기 전에 직접 넣어 주십시오 (영문 소문자·숫자·-·_).'};
+  bindIn('#fSlug',v=>{s.slugIn=v.trim();if(!s.slugIn||slugOk(s.slugIn))s.slug=slugFor(s);slugMsg()});slugMsg();
+  bindIn('#fPrev',v=>s.previewStart=Math.max(0,+v||0));
   $('#fPrevHere').onclick=()=>{s.previewStart=Math.round(E.t*10)/10;$('#fPrev').value=s.previewStart;markDirty()};
   $('#fMedia').onclick=async()=>{const f=await pickFile('video/*,audio/*');if(!f)return;s.media=f;s.mediaName=f.name;s.mediaType=f.type||MIME[extOf(f.name)]||'';P.pause();await loadEdMedia();seekEd(0);updPlayBtn();markDirty();setTab('song')};
   const mx=$('#fMediaX');if(mx)mx.onclick=async()=>{s.media=null;s.mediaName='';P.pause();await loadEdMedia();markDirty();setTab('song')};
-  const reMedia=async()=>{const t=E.t;P.pause();await loadEdMedia();seekEd(Math.min(t,songLen()));updPlayBtn();setTab('song')};
+  // redraw the tab first so the choice shows at once; loading YouTube can take a while
+  const reMedia=async()=>{const t=E.t;P.pause();setTab('song');const m=$('#fYtMsg');if(useYt(s)&&m)m.textContent='유튜브 영상을 불러오는 중…';
+   await loadEdMedia();seekEd(Math.min(t,songLen()));updPlayBtn();const m2=$('#fYtMsg');if(m2&&E.tab==='song')m2.textContent=BS.ytId(s.yt)?'영상 ID: '+BS.ytId(s.yt)+(s.ytDur?' · '+fmt(s.ytDur):'')+(useYt(s)&&!P.isYt()?' · 불러오지 못했습니다':''):'영상을 내려받지 않고 유튜브 플레이어로 재생합니다. 인터넷 연결이 필요합니다.'};
   $('#fYt').onchange=async e=>{const v=e.target.value.trim(),id=BS.ytId(v);if(v&&!id){$('#fYtMsg').textContent='유튜브 링크를 알아볼 수 없습니다. 주소를 다시 확인해 주십시오.';return}
-   if(id&&id!==s.yt)ytWarn();s.yt=id||'';s.ytDur=0;if(!id&&s.src==='yt')s.src='file';else if(id&&!s.media)s.src='yt';markDirty();await reMedia()};
-  tb.querySelectorAll('[name=fSrc]').forEach(r=>r.onchange=async()=>{s.src=r.value;markDirty();await reMedia()});
+   if(id&&id!==s.yt)ytWarn();s.yt=id||'';s.ytDur=0;if(!id&&s.src==='yt')s.src='file';else if(id)s.src='yt';markDirty();await reMedia()};
+  tb.querySelectorAll('[name=fSrc]').forEach(r=>r.onchange=async()=>{if(r.value==='yt'&&!BS.ytId(s.yt)){const v=BS.ytId($('#fYt').value);if(v){s.yt=v;ytWarn()}else{toast('먼저 유튜브 링크를 넣어 주십시오');r.checked=false;tb.querySelector('[name=fSrc][value=file]').checked=true;return}}
+   if(r.value==='file'&&!s.media&&BS.ytId(s.yt))toast('영상 파일이 없어서 음악 없이 재생됩니다');s.src=r.value;markDirty();await reMedia()});
   const setYo=v=>{s.ytOff=Math.round(+v||0);$('#fYtOff').value=s.ytOff;if(P.isYt())P.setYtOff(s.ytOff);markDirty()};
   $('#fYtOff').onchange=e=>setYo(e.target.value);tb.querySelectorAll('[data-yo]').forEach(b=>b.onclick=()=>setYo((+s.ytOff||0)+ +b.dataset.yo));
   tb.querySelectorAll('[data-img]').forEach(el=>{const go=async()=>{const f=await pickFile('image/*');if(!f)return;s[el.dataset.img]=await readImage(f,el.dataset.img==='bg'?1600:800);markDirty();setTab('song')};el.onclick=go;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}}});
   tb.querySelectorAll('[data-imgx]').forEach(b=>b.onclick=()=>{s[b.dataset.imgx]=null;markDirty();setTab('song')});
-  $('#fOffHere').onclick=()=>{s.offset=Math.round(E.t*1000);$('#fOff').value=s.offset;markDirty();toast('첫 박을 '+fmt(E.t)+'로 맞췄습니다')};
-  $('#fTap').onclick=()=>{AU.init();AU.play('tick',.5);const n=performance.now();if(E.taps.length&&n-E.taps[E.taps.length-1]>2000)E.taps=[];E.taps.push(n);if(E.taps.length>16)E.taps.shift();
-   if(E.taps.length>=4){const iv=(E.taps[E.taps.length-1]-E.taps[0])/(E.taps.length-1),bpm=Math.round(60000/iv*10)/10;$('#fTapOut').innerHTML=`측정값 <b>${bpm}</b> BPM (${E.taps.length}번 탭) · <button id="fTapUse" style="min-height:32px;padding:2px 10px">적용</button>`;$('#fTapUse').onclick=()=>{s.bpm=Math.round(bpm);$('#fBpm').value=s.bpm;markDirty()}}else $('#fTapOut').textContent=`${E.taps.length}번… 계속 눌러 주십시오`}}
+}
  else if(t==='chart'){const di=BS.diffInfo(E.diff);tb.innerHTML=`
+ ${beatHTML(s)}
  <div><span class="dpill" style="--dc:${di.c};--dt:${di.t}">${di.n} <b>${s.charts[E.diff].level}</b></span> <span class="sub">편집 중 · 위쪽에서 난이도와 레벨을 바꿉니다</span></div>
  <div class="stat" id="cStat"></div>
  <button id="cAuto" class="pri">자동 채보 만들기 (영상/음악 분석)</button>
@@ -644,7 +657,7 @@ function setTab(t){E.tab=t;$$('#tabs button').forEach(b=>b.classList.toggle('on'
   <li>정지 상태에서 <b>${SET.keys.map(BS.keyName).join(' ')}</b> = 빨간 선 위치에 노트 토글</li>
   <li><b>● 녹음</b> 켜고 재생하면서 키 입력 → 실시간 채보 (길게 = 롱노트)</li>
   <li><b>Ctrl+Z / Ctrl+Y</b> 되돌리기 · <b>Ctrl+S</b> 저장</li>
- </ul>`;updStats();
+ </ul>`;bindBeat(s);updStats();
   $('#cAuto').onclick=openAuto;
   $('#cZoom').oninput=e=>E.zoom=+e.target.value;$('#cAssist').onchange=e=>E.assist=e.target.checked;$('#cMetro').onchange=e=>E.metro=e.target.checked;$('#cSnapRec').onchange=e=>E.snapRec=e.target.checked;
   $('#cCopy').onclick=async()=>{const f=$('#cFrom').value,src=s.charts[f].notes;if(!src.length){toast('그 난이도는 비어 있습니다');return}if(s.notes.length&&!await BS.confirm(`지금 ${di.n} 노트를 ${BS.diffInfo(f).n} 노트로 바꾸시겠습니까? (Ctrl+Z로 되돌릴 수 있습니다)`,'바꾸기'))return;pushUndo();s.notes=JSON.parse(JSON.stringify(src));markDirty();drawDiff()};

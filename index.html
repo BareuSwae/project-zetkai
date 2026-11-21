@@ -334,7 +334,7 @@ async function loadDev(){const db=await new Promise((res,rej)=>{const r=indexedD
  COMICS=comics.filter(c=>c.include!==false&&c.pages&&c.pages.length).sort((a,b)=>(a.order||0)-(b.order||0)).map(c=>({id:c.id,title:c.title||'',desc:c.desc||'',pages:c.pages}));
  GAMECFG.resultChar=Object.assign({},sys.resultImg||{});GAMECFG.soundSrc={};for(const k in (sys.sounds||{})){const v=sys.sounds[k];if(v&&v.f)GAMECFG.soundSrc[k]=v.f}GAMECFG.soundVol=sys.soundVol||{};
  ROSTER=roster.filter(c=>c.include!==false).sort((a,b)=>(a.order||0)-(b.order||0));
- SONGS=songs.filter(s=>s.include!==false).sort((a,b)=>(a.order||0)-(b.order||0)).map(raw=>{const s=BS.normSong(raw);s.id=raw.slug;s.mediaSrc=raw.src==='yt'&&BS.ytId(raw.yt)?BS.ytSrc(BS.ytId(raw.yt),raw.ytOff):url(raw.media);s.bgSrc=raw.bg;s.coverSrc=raw.cover;return s});
+ SONGS=songs.filter(s=>s.include!==false).sort((a,b)=>(a.order||0)-(b.order||0)).map(raw=>{const s=BS.normSong(raw);s.id=raw.slug||raw.id;s.mediaSrc=raw.src==='yt'&&BS.ytId(raw.yt)?BS.ytSrc(BS.ytId(raw.yt),raw.ytOff):url(raw.media);s.bgSrc=raw.bg;s.coverSrc=raw.cover;return s});
  return SONGS.length>0}
 async function boot(){
  let ok=false;if(DEV){try{ok=await loadDev()}catch(e){}if(ok){$('#devTag').hidden=false;$('#gaDev').hidden=false}else BS.toast('도구에 저장된 곡이 없어서 songs 폴더를 불러왔습니다')}

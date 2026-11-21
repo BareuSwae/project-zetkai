@@ -110,6 +110,10 @@
 .gsec .ggrid{padding:0 0 10px;max-width:none;overflow:visible;flex:none}
 .gcard .th.wide{aspect-ratio:16/9;background-size:cover}
 .gcard.lock{cursor:default}.alist{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:12px;padding:6px 16px 30px;max-width:1240px;width:100%;margin:0 auto;align-content:start}
+.atabs{display:flex;gap:8px;max-width:1240px;width:100%;margin:0 auto;padding:4px 16px 10px}
+.atabs button{padding:8px 18px;border-radius:4px 14px 4px 14px;border:2px solid var(--line);background:var(--bg2);color:var(--mut);font:700 15px var(--body);cursor:pointer}
+.atabs button small{font:700 12px var(--num);margin-left:4px;opacity:.8}
+.atabs button.on{border-color:var(--mi);color:#fff;background:rgba(24,216,224,.12)}
 .aitem{display:flex;gap:12px;align-items:center;background:var(--bg2);border:2px solid var(--line);border-radius:4px 16px 4px 16px;padding:12px 14px;min-width:0}
 .aitem .ai{flex:none;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font:800 22px var(--num);background:#141c22;color:#3a4a54;border:2px solid #24313a}
 .aitem.on{border-color:var(--mi)}.aitem.on .ai{background:linear-gradient(135deg,#18d8e0,#ad59b3);color:#fff;border-color:transparent;box-shadow:0 0 14px rgba(24,216,224,.45)}
@@ -254,6 +258,7 @@
 
 <section id="ach" class="screen stripes">
   <header class="shead"><button class="tbtn" id="aBack">‹ 돌아가기</button><h2 class="skt" style="margin:0"><span>업적</span></h2><span class="sp"></span><span class="sub" id="aCount"></span></header>
+  <div class="atabs" id="atabs"><button data-at="gen" class="on">일반 업적 <small></small></button><button data-at="song">곡 업적 <small></small></button></div>
   <div class="alist" id="alist"></div>
 </section>
 <div class="achpop" id="achPop"></div>
@@ -484,7 +489,11 @@ function popNext(){if(popOn||!popQ.length)return;if(document.querySelector('#bs-
  setTimeout(()=>{el.classList.remove('on');setTimeout(()=>{popOn=false;popNext()},500)},2600)}
 let achFrom='title';
 function openAch(from){achFrom=from;stopPrev();show('ach');renderAch()}
-function renderAch(){const got=achGot(),L2=achList(),n=L2.filter(a=>got[a.id]).length;$('#aCount').textContent=`${n} / ${L2.length} 달성`;
+let achTab='gen';
+$('#atabs').addEventListener('click',e=>{const b=e.target.closest('[data-at]');if(!b)return;achTab=b.dataset.at;renderAch()});
+function renderAch(){const got=achGot(),ALL=achList(),n=ALL.filter(a=>got[a.id]).length;$('#aCount').textContent=`${n} / ${ALL.length} 달성`;
+ const cnt=f=>{const x=ALL.filter(f);return`${x.filter(a=>got[a.id]).length}/${x.length}`};$$('#atabs [data-at]').forEach(b=>{b.classList.toggle('on',b.dataset.at===achTab);b.querySelector('small').textContent=cnt(b.dataset.at==='song'?a=>!!a.song:a=>!a.song)});
+ const L2=ALL.filter(a=>achTab==='song'?!!a.song:!a.song);
  const fmt=t=>{const d=new Date(t);return`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} 달성`};
  $('#alist').innerHTML=L2.map(a=>{const on=!!got[a.id],hid=a.hidden&&!on;return`<div class="aitem${on?' on':''}${hid?' hid':''}"><i class="ai">${on?'★':'?'}</i><div><b>${hid?'???':esc(a.name)}</b><p>${hid?'숨겨진 업적입니다':esc(a.desc)}</p>${on?`<time>${fmt(got[a.id])}</time>`:''}</div></div>`}).join('')}
 const V={c:null,p:0};

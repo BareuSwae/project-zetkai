@@ -160,7 +160,7 @@ body.stimg .platform::before{content:"";position:absolute;left:50%;bottom:0;widt
 .rtab tr{opacity:0}
 .g.res-on .rtab tr{animation:up .35s ease-out forwards}
 .j-PERFECT{background:linear-gradient(90deg,#18d8e0,#9ff3d0,#ffd43b);-webkit-background-clip:text;background-clip:text;color:transparent}
-.j-GREAT{color:#ff7fbf}.j-GOOD{color:#5aa9ff}.j-BAD{color:#a98bff}.j-MISS{color:#8d9ca4}.j-etc{color:#93a4ae;font-style:normal!important;font-family:var(--body)!important;font-weight:700!important;font-size:13px!important}
+.j-GREAT{color:#ffd43b}.j-GOOD{color:#5aa9ff}.j-BAD{color:#a98bff}.j-MISS{color:#8d9ca4}.j-etc{color:#93a4ae;font-style:normal!important;font-family:var(--body)!important;font-weight:700!important;font-size:13px!important}
 @keyframes up{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:none}}
 .rbtns{display:flex;gap:10px;opacity:0;flex-wrap:wrap;justify-content:center}
 .g.res-on .rbtns{animation:up .4s ease-out 1.5s forwards}
@@ -213,7 +213,7 @@ body.stimg .platform::before{content:"";position:absolute;left:50%;bottom:0;widt
 /* result speaker: small, right next to the result card (bottom-right stays empty) */
 .rchar{position:absolute;right:calc(min(25vw,310px) - min(22vw,270px) - 4px);top:20%;height:min(40vh,380px);width:min(22vw,270px);object-fit:contain;object-position:0% 100%;z-index:8;pointer-events:none;transform:translateX(130%);opacity:0;transition:transform .6s cubic-bezier(.2,1.2,.3,1),opacity .3s;filter:drop-shadow(0 10px 24px rgba(0,0,0,.5))}
 .g.res-on .rchar.on{transform:none;opacity:1}
-@media(min-width:901px){.g.res-on .rbox{padding-right:min(25vw,310px)}}
+@media(min-width:901px){.g.res-on .rbox{padding-right:min(22vw,270px)}}
 @media(max-width:900px){.rchar{top:max(6px,env(safe-area-inset-top));height:14vh;width:30vw;right:6px;object-position:50% 100%}.g.res-on .rbox{padding-top:calc(14vh + 10px)}}
 
 /* YouTube ad / slow start: show the player so its skip button can be pressed */

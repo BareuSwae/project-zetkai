@@ -526,8 +526,8 @@ $('#tRec').onclick=()=>{E.rec=!E.rec;$('#tRec').classList.toggle('on',E.rec);toa
 
 function eLoop(){if(cur!=='editor')return;E.raf=requestAnimationFrame(eLoop);if(BS.G.active)return;const s=E.song;
  if(P.playing){const nt=P.time();const a=E.lastT*1000,b=nt*1000;
-  if(b>a&&b-a<300){let hit=false;for(const n of s.notes){const m=BS.b2ms(s,n.b);if(m>a&&m<=b){hit=true;break}}
-   if(hit){if(E.assist&&!E.rec)AU.play('hit',.5);const ps=$('#prevStage');if(ps)Stage.hop(ps,1)}
+  if(b>a&&b-a<300){let hit=false;const ps=$('#prevStage');for(const n of s.notes){const m=BS.b2ms(s,n.b);if(m>a&&m<=b){hit=true;if(ps)Stage.hop(ps,1,n.l)}}
+   if(hit){if(E.assist&&!E.rec)AU.play('hit',.5)}
    if(E.metro){const bm=BS.bms(s),ba=Math.floor((a-s.offset)/bm),bb=Math.floor((b-s.offset)/bm);if(bb>ba&&bb>=0)AU.play(bb%4===0?'hi':'tick',.55)}}
   E.t=nt;E.lastT=nt;if((P.has&&P.ended)||E.t>=songLen()){P.pause();E.t=Math.min(E.t,songLen());P.seek(E.t);updPlayBtn()}}
  eDraw();const b=s2b(E.t);$('#tTime').innerHTML=`<b>${fmt(E.t)}</b> · ${b>=0?`${Math.floor(b/4)+1}마디 ${Math.floor(b%4)+1}박`:'첫 박 전'}`;
@@ -724,7 +724,7 @@ addEventListener('keydown',e=>{if(BS.G.active||BS.modalOpen()||cur!=='editor')re
  if(mod&&e.code==='KeyZ'){e.preventDefault();e.shiftKey?redo():undo();return}
  if(mod&&e.code==='KeyY'){e.preventDefault();redo();return}
  if(mod)return;
- const l=SET.keys.indexOf(e.code);if(l>=0){e.preventDefault();if(!e.repeat){if(P.playing&&!E.rec){AU.play('hit',.4);const ps=$('#prevStage');if(ps)Stage.hop(ps,1);return}recDown(l)}return}
+ const l=SET.keys.indexOf(e.code);if(l>=0){e.preventDefault();if(!e.repeat){if(P.playing&&!E.rec){AU.play('hit',.4);const ps=$('#prevStage');if(ps)Stage.hop(ps,1,l);return}recDown(l)}return}
  if(e.code==='Space'){e.preventDefault();togglePlay();return}
  const step=BS.bms(E.song)/1000/E.div;
  if(e.code==='ArrowUp'){e.preventDefault();seekEd(b2s(snap(s2b(E.t)))+step);return}

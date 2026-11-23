@@ -13,7 +13,7 @@ Object.assign(BS,{$,$$,clamp,esc,LS,COARSE,pick});
 /* ---------- constants ---------- */
 BS.DIFFS=[{k:'easy',n:'EASY',c:'#1fb8a6',t:'#fff'},{k:'normal',n:'NORMAL',c:'#f5c518',t:'#2a2200'},{k:'hard',n:'HARD',c:'#9b5de5',t:'#fff'}];
 BS.diffInfo=k=>BS.DIFFS.find(d=>d.k===k)||BS.DIFFS[1];
-BS.VERSION='v44';
+BS.VERSION='v45';
 BS.LINES={S:['캬ㅏㅏㅏ 이게 나야 이게 나야!!','봤습니까 여러분들? 저 리듬게임 잘해요~'],A:['솔직히 이정도면 잘한거죠 인정?','뭐 한두개쯤은 틀릴 수 있는거 아니에요?'],B:['뭐...그럴 수 있죠ㅋㅋ','아 곡이 어려운거임~'],C:['뭐...D는 아니지 않습니까?','ㅋㅋㅋㅋㅋㅋㅋ오케이!! 완벽히 깨달았다!'],D:['사실 D랭크는 뭔 말할지 궁금해서 일부러 받은거임~!!','뭐하는거야~ 마짱뜰래~!!']};
 BS.RANKS=[['C',70],['B',80],['A',90],['S',95]];
 /* achievements (names/descriptions can be changed in the developer tool) */
@@ -325,11 +325,13 @@ function update(t){for(let l=0;l<4;l++){const a=G.lanes[l];let p=G.ptr[l];
   if(!G.held[l])G.beam[l]*=.84}
  if(!P.has&&SET.metro){const b=Math.floor((t-G.song.offset)/BS.bms(G.song));if(G.lastBeat===null)G.lastBeat=b;if(b>G.lastBeat){G.lastBeat=b;if(b>=0&&t<G.lastEnd+300)AU.play(b%4===0?'hi':'tick',.4)}}
  const done=G.judged>=G.total;
+ // FULL COMBO call-out comes ~3s before the song itself ends (or right after the last note if the song ends sooner)
+ if(done&&!G.fcShown&&!G.failed){const endT=P.has&&P.dur?P.dur*1000:G.lastEnd+1800;if(t>=endT-3000)checkFC()}
  if(P.has){if(done&&$('#g-skip').hidden&&t>G.lastEnd+1200)$('#g-skip').hidden=false;if(P.ended||(P.dur&&t>P.dur*1000+500))finish()}else if(done&&t>G.lastEnd+1800)finish()}
 
 const LIFE={PERFECT:6,GREAT:3,GOOD:0,BAD:-50,MISS:-100};
 function updLife(){$('#g-life').textContent=Math.round(G.life);$('#g-lifei').style.width=G.life/10+'%';sec.classList.toggle('low',G.lifeOn&&G.life<300&&!G.finished)}
-function judge(g,dt,lane){G.cnt[g]++;G.pts+=PTS[g];G.judged++;setTimeout(checkFC,0);
+function judge(g,dt,lane){G.cnt[g]++;G.pts+=PTS[g];G.judged++;
  if((g==='MISS'||g==='BAD')&&!G.finished){const now=performance.now();if(!(G.lastMissSnd>now-200)){G.lastMissSnd=now;AU.play('miss',1)}}
  if(G.lifeOn&&!G.finished){G.life=clamp(G.life+LIFE[g],0,1000);updLife();if(G.life<=0){if(!SET.jako){gameOver();return}G.jakoUsed=true}}
  if(g==='BAD'||g==='MISS'){Stage.shake(stEl);G.combo=0;G.missUntil=performance.now()+(+G.song.missMs||700)}
@@ -434,7 +436,7 @@ function exit(reason){G.running=false;G.active=false;cancelAnimationFrame(G.raf)
 $('#g-pause').onclick=pause;$('#p-resume').onclick=resume;$('#p-restart').onclick=()=>BS.play(G.song,G.opt);$('#p-quit').onclick=()=>exit('quit');
 $('#g-skip').onclick=()=>finish();
 function leaveRes(f){if(sec.classList.contains('leaving'))return;sec.classList.add('leaving');$('#g-res').classList.add('out');$('#r-bubble').classList.remove('on');$('#r-char').classList.remove('on');setTimeout(()=>{sec.classList.remove('leaving');f()},360)}
-$('#r-char').addEventListener('load',()=>{if(G.bub)placeBubble()});
+$('#r-char').addEventListener('load',()=>{if(sec.classList.contains('res-on'))placeRChar();if(G.bub)placeBubble()});
 $('#r-retry').onclick=()=>leaveRes(()=>BS.play(G.song,G.opt));$('#r-back').onclick=()=>leaveRes(()=>exit('back'));
 addEventListener('keydown',e=>{if(!G.active||BS.modalOpen())return;const l=SET.keys.indexOf(e.code);
  if(sec.classList.contains('res-on')){if(e.code==='Enter'){e.preventDefault();$('#r-retry').click()}else if(e.code==='Escape')$('#r-back').click();return}
@@ -481,14 +483,17 @@ function showResult(){if(!G.active)return;P.pause();G.running=false;cancelAnimat
  clearTimeout(G.bt);clearTimeout(G.bt2);placeRChar();G.bt2=setTimeout(()=>{if(sec.classList.contains('res-on')){placeRChar();rcImg.classList.add('on');BS.swoosh(.3)}},1100);G.bt=setTimeout(()=>showBubble(pick(lines)),1750)}
 
 /* result speaker stands just right of the result card (wide screens) */
-function placeRChar(){const im=$('#r-char'),c=sec.querySelector('.rcard');if(!c||innerWidth<=900){im.style.left='';im.style.right='';return}const r=c.getBoundingClientRect(),R=sec.getBoundingClientRect();im.style.left=Math.round(r.right-R.left+8)+'px';im.style.right='auto'}
+function placeRChar(){const im=$('#r-char'),c=sec.querySelector('.rcard');if(!c||innerWidth<=900){im.style.left='';im.style.right='';im.style.top='';return}const r=c.getBoundingClientRect(),R=sec.getBoundingClientRect();im.style.left=Math.round(r.right-R.left+8)+'px';im.style.right='auto';
+ // the picture's bottom sits level with the bottom of the result card
+ im.style.top=Math.round(Math.max(8,r.bottom-R.top-im.offsetHeight))+'px'}
 /* speech bubble */
 function showBubble(text){if(!sec.classList.contains('res-on'))return;G.bub={};$('#r-line').textContent=text;
  placeBubble();AU.play('pop',.5);const b=$('#r-bubble');b.classList.remove('on');void b.offsetWidth;b.classList.add('on')}
 function placeBubble(){const b=$('#r-bubble'),im=$('#r-char'),r=im.getBoundingClientRect(),R=sec.getBoundingClientRect();if(!r.width)return;
  const nw=im.naturalWidth||3,nh=im.naturalHeight||4,dw=Math.min(r.width,r.height*nw/nh),dh=dw*nh/nw,leftAl=/^0(%|px)?\s/.test(getComputedStyle(im).objectPosition),left=r.left-R.left+(leftAl?0:(r.width-dw)/2),top=r.bottom-dh-R.top;
- b.style.left='0px';b.style.top='0px';const bw=b.offsetWidth,bh=b.offsetHeight,mob=R.width<=900;let x,y;
- if(mob){x=clamp(left-bw+dw*.2,8,R.width-bw-8);y=clamp(top+dh*.35-bh,6,R.height-bh-8)}else{x=clamp(left+dw/2-bw*.7,8,R.width-bw-8);y=clamp(top-bh-12,6,R.height-bh-8)}
+ const mob=R.width<=900,card=sec.querySelector('.rcard'),cr=card&&!mob?card.getBoundingClientRect():null,minX=cr?cr.right-R.left+6:8;
+ b.style.maxWidth=cr?Math.max(180,R.width-minX-8)+'px':'';b.style.left='0px';b.style.top='0px';const bw=b.offsetWidth,bh=b.offsetHeight;let x,y;
+ if(mob){x=clamp(left-bw+dw*.2,8,R.width-bw-8);y=clamp(top+dh*.35-bh,6,R.height-bh-8)}else{x=clamp(left+dw/2-bw/2,Math.min(minX,R.width-bw-8),R.width-bw-8);y=clamp(top-bh-12,6,R.height-bh-8)}
  b.style.left=x+'px';b.style.top=y+'px';b.style.setProperty('--tx',clamp(left+dw*(mob?.25:.5)-x-9,14,bw-32)+'px');b.style.setProperty('--ox',(mob?100:70)+'%')}
 function hideBubble(){clearTimeout(G.bt);clearTimeout(G.bt2);G.bub=null;$('#r-bubble').classList.remove('on');$('#r-char').classList.remove('on')}
 

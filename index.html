@@ -110,16 +110,16 @@
 .gsec h3{margin:10px 0 10px;font:20px var(--disp);display:flex;align-items:center;gap:10px}.gsec h3 small{font:600 13px var(--body);color:var(--mut)}
 .gsec .ggrid{padding:0 0 10px;max-width:none;overflow:visible;flex:none}
 .gcard .th.wide{aspect-ratio:16/9;background-size:cover}
-.gcard.lock{cursor:default}.alist{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:12px;padding:6px 16px 30px;max-width:1240px;width:100%;margin:0 auto;align-content:start}
-.atabs{display:flex;gap:8px;max-width:1240px;width:100%;margin:0 auto;padding:4px 16px 10px}
+.gcard.lock{cursor:default}.alist{flex:1;overflow:auto;display:grid;grid-template-columns:1fr;gap:10px;padding:6px 16px 30px;max-width:980px;width:100%;margin:0 auto;align-content:start}
+.atabs{display:flex;gap:8px;max-width:980px;width:100%;margin:0 auto;padding:4px 16px 10px}
 .atabs button{padding:8px 18px;border-radius:4px 14px 4px 14px;border:2px solid var(--line);background:var(--bg2);color:var(--mut);font:700 15px var(--body);cursor:pointer}
 .atabs button small{font:700 12px var(--num);margin-left:4px;opacity:.8}
 .atabs button.on{border-color:var(--mi);color:#fff;background:rgba(24,216,224,.12)}
-.aitem{display:flex;gap:12px;align-items:center;background:var(--bg2);border:2px solid var(--line);border-radius:4px 16px 4px 16px;padding:12px 14px;min-width:0}
-.aitem .ai{flex:none;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font:800 22px var(--num);background:#141c22;color:#3a4a54;border:2px solid #24313a}
+.aitem{display:flex;gap:18px;align-items:center;background:var(--bg2);border:2px solid var(--line);border-radius:6px 22px 6px 22px;padding:16px 22px;min-width:0;min-height:84px}
+.aitem .ai{flex:none;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font:800 26px var(--num);background:#141c22;color:#3a4a54;border:2px solid #24313a}
 .aitem.on{border-color:var(--mi)}.aitem.on .ai{background:linear-gradient(135deg,#18d8e0,#ad59b3);color:#fff;border-color:transparent;box-shadow:0 0 14px rgba(24,216,224,.45)}
-.aitem div{min-width:0;flex:1}.aitem b{display:block;font:17px var(--disp);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.aitem p{margin:2px 0 0;color:var(--mut);font-size:13px;line-height:1.4}
-.aitem time{display:block;margin-top:3px;font:600 11px var(--num);color:var(--mi)}
+.aitem div{min-width:0;flex:1}.aitem b{display:block;font:22px var(--disp);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.aitem p{margin:4px 0 0;color:var(--mut);font-size:15px;line-height:1.45}
+.aitem time{display:block;margin-top:5px;font:600 13px var(--num);color:var(--mi)}
 .aitem.hid b{color:var(--mut)}
 .achpop{position:fixed;left:50%;top:max(16px,env(safe-area-inset-top));z-index:290;transform:translate(-50%,-160%);transition:transform .45s cubic-bezier(.2,.9,.3,1.2),visibility 0s .45s;visibility:hidden;pointer-events:none;display:flex;align-items:center;gap:12px;background:rgba(10,16,20,.94);border:2px solid var(--mi);border-radius:6px 20px 6px 20px;padding:10px 18px 10px 12px;box-shadow:0 8px 30px rgba(0,0,0,.5),0 0 20px rgba(24,216,224,.35);max-width:min(92vw,460px)}
 .achpop.on{transform:translate(-50%,0);visibility:visible;transition:transform .45s cubic-bezier(.2,.9,.3,1.2)}
@@ -363,7 +363,9 @@ function splash(){const items=GAMECFG.splashItems||[];if(!items.length)return Pr
  const stopSnd=()=>{if(snd){snd.pause();snd=null}};
  const end=()=>{if(done)return;done=true;clearTimeout(t);stopSnd();sp.classList.add('bye');setTimeout(()=>{sp.classList.remove('on','bye');res()},500)};
  const next=()=>{if(done)return;if(i>=items.length)return end();const it=items[i++];im.classList.remove('show');im.onload=()=>{requestAnimationFrame(()=>im.classList.add('show'));stopSnd();if(it.snd){snd=new Audio(it.snd);snd.volume=Math.min(1,SET.vol+.2);snd.play().catch(()=>{})}t=setTimeout(()=>{im.classList.remove('show');t=setTimeout(next,750)},700+it.ms)};im.onerror=()=>next();im.src=it.src};
- const go=()=>{sp.classList.remove('gate');sp.onclick=()=>{BS.AU.init();end()};next()};
+ // a click skips only the logo on screen; the next one follows
+ const skip=()=>{if(done)return;clearTimeout(t);stopSnd();im.classList.remove('show');t=setTimeout(next,260)};
+ const go=()=>{sp.classList.remove('gate');sp.onclick=()=>{BS.AU.init();skip()};next()};
  // browsers only allow sound after a touch, so logos with sound wait behind one tap
  if(items.some(it=>it.snd)){sp.classList.add('gate');sp.onclick=()=>{BS.AU.init();go()}}else go()})}
 

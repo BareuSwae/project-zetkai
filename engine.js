@@ -13,7 +13,7 @@ Object.assign(BS,{$,$$,clamp,esc,LS,COARSE,pick});
 /* ---------- constants ---------- */
 BS.DIFFS=[{k:'easy',n:'EASY',c:'#1fb8a6',t:'#fff'},{k:'normal',n:'NORMAL',c:'#f5c518',t:'#2a2200'},{k:'hard',n:'HARD',c:'#9b5de5',t:'#fff'}];
 BS.diffInfo=k=>BS.DIFFS.find(d=>d.k===k)||BS.DIFFS[1];
-BS.VERSION='v42';
+BS.VERSION='v44';
 BS.LINES={S:['캬ㅏㅏㅏ 이게 나야 이게 나야!!','봤습니까 여러분들? 저 리듬게임 잘해요~'],A:['솔직히 이정도면 잘한거죠 인정?','뭐 한두개쯤은 틀릴 수 있는거 아니에요?'],B:['뭐...그럴 수 있죠ㅋㅋ','아 곡이 어려운거임~'],C:['뭐...D는 아니지 않습니까?','ㅋㅋㅋㅋㅋㅋㅋ오케이!! 완벽히 깨달았다!'],D:['사실 D랭크는 뭔 말할지 궁금해서 일부러 받은거임~!!','뭐하는거야~ 마짱뜰래~!!']};
 BS.RANKS=[['C',70],['B',80],['A',90],['S',95]];
 /* achievements (names/descriptions can be changed in the developer tool) */

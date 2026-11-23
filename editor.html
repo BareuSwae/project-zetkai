@@ -117,6 +117,7 @@ input[type=color]{width:44px;height:36px;padding:2px;border:1px solid var(--line
 .spprev{position:fixed;inset:0;z-index:190;display:none;align-items:center;justify-content:center;cursor:pointer}.spprev.on{display:flex}
 .spprev img{max-width:min(70vw,900px);max-height:56vh;object-fit:contain;opacity:0;transition:opacity .7s}.spprev img.show{opacity:1}
 .lines{display:grid;gap:8px}.lines label{display:grid;gap:3px;font-size:13px}.lines b{font:italic 800 16px var(--num);color:var(--co)}
+#tModes button kbd{margin-left:5px;padding:0 4px;border-radius:4px;background:rgba(255,255,255,.12);font:700 10px Rubik,monospace;opacity:.75}
 </style>
 </head>
 <body>
@@ -200,7 +201,7 @@ input[type=color]{width:44px;height:36px;padding:2px;border:1px solid var(--line
           <span id="tTime" class="mono"></span>
           <select id="tRate" aria-label="재생 속도"><option value="1">1x</option><option value="0.75">0.75x</option><option value="0.5">0.5x</option><option value="0.25">0.25x</option></select>
         </div>
-        <div class="seg" id="tModes"><button data-m="pan">이동</button><button data-m="note" class="on">노트</button><button data-m="ln">롱노트</button><button data-m="erase">지우개</button></div>
+        <div class="seg" id="tModes"><button data-m="pan" title="이동 (V 또는 1)">이동<kbd>V</kbd></button><button data-m="note" class="on" title="노트 (Q 또는 2) — 끌면 롱노트">노트<kbd>Q</kbd></button><button data-m="ln" title="롱노트 (W 또는 3)">롱노트<kbd>W</kbd></button><button data-m="erase" title="지우개 (E 또는 4)">지우개<kbd>E</kbd></button><button data-m="sel" title="선택 (A 또는 5) — 끌어서 여러 개 선택, Ctrl+C/V">선택<kbd>A</kbd></button></div>
         <div class="tg">
           <select id="tDiv" aria-label="스냅"><option value="1">1/1 박</option><option value="2">1/2 박</option><option value="3">1/3 박</option><option value="4" selected>1/4 박</option><option value="6">1/6 박</option><option value="8">1/8 박</option><option value="12">1/12 박</option><option value="16">1/16 박</option></select>
           <button id="tRec" title="재생 중 D F J K로 노트 찍기">● 녹음</button>
@@ -486,7 +487,7 @@ $('#hImport').onclick=async()=>{const f=await pickFile('.zip,application/zip');i
 
 /* ================= EDITOR ================= */
 const ec=$('#ec'),ex=ec.getContext('2d');
-const E={song:null,diff:'normal',t:0,lastT:0,zoom:240,div:4,mode:'note',undo:[],redo:[],drag:null,rec:false,snapRec:true,metro:false,assist:true,dirty:false,tab:'song',pv:'idle',taps:[],pend:[null,null,null,null],hover:null,raf:0,geo:null};
+const E={song:null,diff:'normal',t:0,lastT:0,zoom:240,div:4,mode:'note',undo:[],redo:[],drag:null,rec:false,snapRec:true,metro:false,assist:true,dirty:false,tab:'song',pv:'idle',taps:[],pend:[null,null,null,null],hover:null,raf:0,geo:null,sel:new Set(),clip:null};
 const songLen=()=>P.has&&P.dur?P.dur:(+E.song.length||90);
 const b2s=b=>BS.b2ms(E.song,b)/1000,s2b=sec=>(sec*1000-E.song.offset)/BS.bms(E.song),snap=b=>Math.round(b*E.div)/E.div;
 const LC=BS.LC;
@@ -501,7 +502,7 @@ async function openEditor(song,isNew){AU.init();P.pause();
  cancelAnimationFrame(E.raf);E.raf=requestAnimationFrame(eLoop)}
 function drawDiff(){$('#eDiff').innerHTML=BS.DIFFS.map(d=>`<button data-d="${d.k}" style="--dc:${d.c};--dt:${d.t}" class="${d.k===E.diff?'on':''}">${d.n}${E.song.charts[d.k].notes.length?'':' ·'}</button>`).join('');$('#eLv').value=E.song.charts[E.diff].level}
 $('#eDiff').onclick=e=>{const b=e.target.closest('[data-d]');if(!b||b.dataset.d===E.diff)return;switchDiff(b.dataset.d)};
-function switchDiff(d){E.song.charts[E.diff].notes=E.song.notes;E.diff=d;E.song.notes=E.song.charts[d].notes;E.undo=[];E.redo=[];E.pend=[null,null,null,null];drawDiff();if(E.tab==='chart')setTab('chart');toast(`${BS.diffInfo(d).n} 채보 편집 중`)}
+function switchDiff(d){E.sel.clear();E.song.charts[E.diff].notes=E.song.notes;E.diff=d;E.song.notes=E.song.charts[d].notes;E.undo=[];E.redo=[];E.pend=[null,null,null,null];drawDiff();if(E.tab==='chart')setTab('chart');toast(`${BS.diffInfo(d).n} 채보 편집 중`)}
 $('#eLv').oninput=e=>{E.song.charts[E.diff].level=clamp(+e.target.value||1,1,99);markDirty()};
 function backToEditor(){BS.mountMedia($('#edPrev'));BS.mediaBox.style.display='';P.setVol(BS.musicLevel());P.pause();if(P._remount)loadEdMedia().then(()=>{P.setRate(+$('#tRate').value);P.seek(E.t)});P.setRate(+$('#tRate').value);P.seek(E.t);updPlayBtn();buildPrev();cancelAnimationFrame(E.raf);E.raf=requestAnimationFrame(eLoop)}
 function markDirty(){E.song.charts[E.diff].notes=E.song.notes;E.dirty=true;updTitle();if(E.tab==='chart')updStats()}
@@ -514,8 +515,8 @@ $('#eTest').onclick=()=>test(E.t);$('#eTest0').onclick=()=>test(0);
 $('#foldBtn').onclick=()=>{const p=$('#panel');p.classList.toggle('fold');$('#foldBtn').textContent=p.classList.contains('fold')?'패널 펼치기':'패널 접기'};
 
 function pushUndo(){E.undo.push(JSON.stringify(E.song.notes));if(E.undo.length>200)E.undo.shift();E.redo=[]}
-function undo(){if(!E.undo.length)return;E.redo.push(JSON.stringify(E.song.notes));E.song.notes=JSON.parse(E.undo.pop());markDirty()}
-function redo(){if(!E.redo.length)return;E.undo.push(JSON.stringify(E.song.notes));E.song.notes=JSON.parse(E.redo.pop());markDirty()}
+function undo(){if(!E.undo.length)return;E.sel.clear();E.redo.push(JSON.stringify(E.song.notes));E.song.notes=JSON.parse(E.undo.pop());markDirty()}
+function redo(){if(!E.redo.length)return;E.sel.clear();E.undo.push(JSON.stringify(E.song.notes));E.song.notes=JSON.parse(E.redo.pop());markDirty()}
 $('#tUndo').onclick=undo;$('#tRedo').onclick=redo;
 function seekEd(t){E.t=clamp(t,0,songLen());P.seek(E.t);E.lastT=E.t}
 function togglePlay(){AU.init();if(P.playing){P.pause();E.t=P.base}else{if(E.t>=songLen()-.05)seekEd(0);P.seek(E.t);P.play();E.lastT=E.t}updPlayBtn()}
@@ -523,7 +524,7 @@ function updPlayBtn(){$('#tPlay').textContent=P.playing?'정지':'재생'}
 $('#tPlay').onclick=togglePlay;$('#tHome').onclick=()=>seekEd(0);
 $('#tRate').onchange=e=>P.setRate(+e.target.value);$('#tDiv').onchange=e=>{E.div=+e.target.value};
 $('#tModes').onclick=e=>{const b=e.target.closest('[data-m]');if(b)setMode(b.dataset.m)};
-function setMode(m){E.mode=m;$$('#tModes button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));ec.style.cursor=m==='pan'?'grab':'crosshair'}
+function setMode(m){E.mode=m;if(m!=='sel')E.sel.clear();$$('#tModes button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));ec.style.cursor=m==='pan'?'grab':m==='sel'?'default':'crosshair'}
 $('#tRec').onclick=()=>{E.rec=!E.rec;$('#tRec').classList.toggle('on',E.rec);toast(E.rec?'녹음 켜짐: 재생 중에 '+SET.keys.map(BS.keyName).join(' ')+' 를 누르면 노트가 찍힙니다. 길게 누르면 롱노트.':'녹음 꺼짐')};
 
 function eLoop(){if(cur!=='editor')return;E.raf=requestAnimationFrame(eLoop);if(BS.G.active)return;const s=E.song;
@@ -550,11 +551,13 @@ function eDraw(){const[W,H]=BS.fit(ec,ex);const s=E.song;const gut=64,lanesW=Mat
  const yl=yOf(songLen());if(yl>0){ex.fillStyle='rgba(0,0,0,.55)';ex.fillRect(0,0,W,yl);ex.fillStyle='#71838d';ex.textAlign='left';ex.font='500 12px Noto Sans KR,sans-serif';if(yl>16)ex.fillText('곡 끝',x0+6,yl-10);ex.textAlign='right'}
  const yb=yOf(s.offset/1000);if(yb>0&&yb<H){ex.fillStyle='#ffd43b';ex.fillRect(x0-9,yb-1,6,2)}
  const yp=yOf(s.previewStart||0);if(s.previewStart&&yp>0&&yp<H){ex.fillStyle='#8fb3ff';ex.fillRect(x0+lanesW+3,yp-1,8,2);ex.textAlign='left';ex.font='500 11px Noto Sans KR,sans-serif';ex.fillText('미리듣기',x0+lanesW+14,yp)}
- for(const n of s.notes){const sy=yOf(b2s(n.b)),ey=n.e!=null?yOf(b2s(n.e)):sy;if(Math.min(sy,ey)>H+20||Math.max(sy,ey)<-20)continue;const c=n.e!=null?'#ffd43b':'#18d8e0',nx=x0+n.l*lw+lw*.08,nw=lw*.84;
+ const d0=E.drag;for(const n of s.notes){const sy=yOf(b2s(n.b)),ey=n.e!=null?yOf(b2s(n.e)):sy;if(Math.min(sy,ey)>H+20||Math.max(sy,ey)<-20)continue;const c=n.e!=null?'#ffd43b':'#18d8e0',nx=x0+n.l*lw+lw*.08,nw=lw*.84;
   if(n.e!=null){ex.fillStyle=hexA(c,.4);ex.fillRect(x0+n.l*lw+lw*.22,ey,lw*.56,sy-ey);rr(ex,nx,ey-4,nw,8,4);ex.fillStyle=hexA(c,.8);ex.fill()}
-  rr(ex,nx,sy-6,nw,12,6);ex.fillStyle=c;ex.fill();ex.fillStyle='rgba(255,255,255,.6)';ex.fillRect(nx+nw*.3,sy-1.5,nw*.4,3)}
+  rr(ex,nx,sy-6,nw,12,6);ex.fillStyle=c;ex.fill();ex.fillStyle='rgba(255,255,255,.6)';ex.fillRect(nx+nw*.3,sy-1.5,nw*.4,3);
+  if(E.sel.has(n)){ex.strokeStyle='#ffffff';ex.lineWidth=2.5;rr(ex,nx-3,Math.min(sy,ey)-9,nw+6,Math.abs(sy-ey)+18,8);ex.stroke()}}
+ if(d0&&d0.type==='sel'){const ya=yOf(d0.s0),yb2=yOf(d0.s1);ex.fillStyle='rgba(24,216,224,.12)';ex.strokeStyle='#18d8e0';ex.lineWidth=1.5;ex.setLineDash([5,4]);const rx=Math.min(d0.x0,d0.x1),ry=Math.min(ya,yb2),rw=Math.abs(d0.x1-d0.x0),rh=Math.abs(yb2-ya);ex.fillRect(rx,ry,rw,rh);ex.strokeRect(rx,ry,rw,rh);ex.setLineDash([])}
  const d=E.drag;if(d&&d.type==='ln'){const sy=yOf(b2s(d.b0)),ey=yOf(b2s(Math.max(d.b0,d.b1)));ex.fillStyle=hexA('#ffd43b',.35);ex.fillRect(x0+d.l*lw+lw*.22,ey,lw*.56,sy-ey);rr(ex,x0+d.l*lw+lw*.08,sy-6,lw*.84,12,6);ex.fillStyle='#ffd43b';ex.fill()}
- const h=E.hover;if(h&&!d&&(E.mode==='note'||E.mode==='ln')&&h.l>=0){const y=yOf(b2s(h.b));rr(ex,x0+h.l*lw+lw*.08,y-6,lw*.84,12,6);ex.fillStyle=hexA(E.mode==='ln'?'#ffd43b':'#18d8e0',.3);ex.fill()}
+ const h=E.hover;if(h&&!d&&(E.mode==='note'||E.mode==='ln')&&h.l>=0&&!clash(h.l,h.b)){const y=yOf(b2s(h.b));rr(ex,x0+h.l*lw+lw*.08,y-6,lw*.84,12,6);ex.fillStyle=hexA(E.mode==='ln'?'#ffd43b':'#18d8e0',.3);ex.fill()}
  ex.fillStyle='#ff7fbf';ex.fillRect(0,py-1,W,2);ex.beginPath();ex.moveTo(0,py-7);ex.lineTo(10,py);ex.lineTo(0,py+7);ex.fill();
  ex.textAlign='center';for(let l=0;l<4;l++){ex.fillStyle='rgba(255,255,255,.35)';ex.font="italic 800 13px Rubik,sans-serif";ex.fillText(BS.keyName(SET.keys[l]),x0+lw*(l+.5),py+16)}
  ex.textAlign='left';ex.font='italic 800 13px Rubik,sans-serif';ex.fillStyle=dc;ex.fillText(`${BS.diffInfo(E.diff).n} ${s.charts[E.diff].level}`,x0+6,16)}
@@ -562,21 +565,36 @@ function eDraw(){const[W,H]=BS.fit(ec,ex);const s=E.song;const gut=64,lanesW=Mat
 function ePos(e){const r=ec.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,g=E.geo;let l=Math.floor((x-g.x0)/g.lw);if(l<0||l>3)l=-1;const sec=E.t+(g.py-y)/E.zoom;return{x,y,l,sec,b:r6(snap(s2b(sec)))}}
 function hitNote(p){if(p.l<0)return null;const g=E.geo,yOf=sec=>g.py-(sec-E.t)*E.zoom;let best=null,bd=1e9;
  for(const n of E.song.notes){if(n.l!==p.l)continue;const sy=yOf(b2s(n.b));let d=Math.abs(p.y-sy);if(n.e!=null){const ey=yOf(b2s(n.e));if(p.y<=sy&&p.y>=ey-5)d=Math.min(d,1)}if(d<=9&&d<bd){bd=d;best=n}}return best}
-function addNote(l,b,e){if(b2s(b)<0)return null;if(E.song.notes.some(n=>n.l===l&&Math.abs(n.b-b)<1e-4))return null;pushUndo();const n=e!=null&&e>b?{b,l,e}:{b,l};E.song.notes.push(n);E.song.notes.sort((a,c)=>a.b-c.b||a.l-c.l);markDirty();return n}
+/* a note may not sit on (or inside) another note of the same lane — this also stops taps landing on long notes */
+function clash(l,b,e,ignore){const hi=e!=null?e:b;return E.song.notes.some(n=>n.l===l&&!(ignore&&ignore.has(n))&&n.b<=hi+1e-4&&(n.e!=null?n.e:n.b)>=b-1e-4)}
+function addNote(l,b,e){if(b2s(b)<0)return null;if(clash(l,b,e>b?e:null))return null;pushUndo();const n=e!=null&&e>b?{b,l,e}:{b,l};E.song.notes.push(n);E.song.notes.sort((a,c)=>a.b-c.b||a.l-c.l);markDirty();return n}
 function delNote(n,nu){const i=E.song.notes.indexOf(n);if(i<0)return;if(!nu)pushUndo();E.song.notes.splice(i,1);markDirty()}
 ec.addEventListener('pointerdown',e=>{AU.init();const p=ePos(e);try{ec.setPointerCapture(e.pointerId)}catch(_){}
- if(e.button===1||E.mode==='pan'||p.l<0){E.drag={type:'pan',y:p.y,t:E.t};if(P.playing){P.pause();updPlayBtn()}ec.style.cursor='grabbing';return}
+ if(e.button===1||E.mode==='pan'||(p.l<0&&E.mode!=='sel')){E.drag={type:'pan',y:p.y,t:E.t};if(P.playing){P.pause();updPlayBtn()}ec.style.cursor='grabbing';return}
  if(e.button===2||E.mode==='erase'){pushUndo();E.drag={type:'erase'};const h=hitNote(p);if(h)delNote(h,true);return}
+ if(E.mode==='sel'){const h=hitNote(p);
+  if(h){if(!E.sel.has(h)){if(!e.shiftKey)E.sel.clear();E.sel.add(h)}else if(e.shiftKey){E.sel.delete(h);return}
+   pushUndo();E.drag={type:'move',b0:p.b,l0:p.l<0?h.l:p.l,orig:new Map([...E.sel].map(n=>[n,{b:n.b,e:n.e,l:n.l}]))};return}
+  if(!e.shiftKey)E.sel.clear();E.drag={type:'sel',x0:p.x,y0:p.y,x1:p.x,y1:p.y,s0:p.sec,s1:p.sec};return}
  const h=hitNote(p);if(h){delNote(h);return}
- if(E.mode==='note'){if(addNote(p.l,p.b))AU.play('hit',.4)}else if(E.mode==='ln')E.drag={type:'ln',l:p.l,b0:p.b,b1:p.b}});
-ec.addEventListener('pointermove',e=>{const p=ePos(e);E.hover=p;const d=E.drag;if(!d)return;if(d.type==='pan')seekEd(d.t+(p.y-d.y)/E.zoom);else if(d.type==='erase'){const h=hitNote(p);if(h)delNote(h,true)}else if(d.type==='ln')d.b1=p.b});
-const eUp=()=>{const d=E.drag;E.drag=null;if(!d)return;if(d.type==='pan')ec.style.cursor=E.mode==='pan'?'grab':'crosshair';if(d.type==='ln'&&addNote(d.l,d.b0,d.b1>d.b0?d.b1:null))AU.play('hit',.4)};
+ if(E.mode==='note'||E.mode==='ln')E.drag={type:'ln',l:p.l,b0:p.b,b1:p.b,tap:E.mode==='note'}});
+ec.addEventListener('pointermove',e=>{const p=ePos(e);E.hover=p;const d=E.drag;if(!d)return;if(d.type==='pan')seekEd(d.t+(p.y-d.y)/E.zoom);else if(d.type==='erase'){const h=hitNote(p);if(h)delNote(h,true)}else if(d.type==='ln')d.b1=p.b;
+ else if(d.type==='sel'){d.x1=p.x;d.y1=p.y;d.s1=p.sec}
+ else if(d.type==='move'){const db=r6(p.b-d.b0),dl=(p.l<0?d.l0:p.l)-d.l0;for(const[n,o]of d.orig){n.b=r6(o.b+db);if(o.e!=null)n.e=r6(o.e+db);n.l=o.l+dl}d.db=db;d.dl=dl}});
+const eUp=()=>{const d=E.drag;E.drag=null;if(!d)return;if(d.type==='pan')ec.style.cursor=E.mode==='pan'?'grab':E.mode==='sel'?'default':'crosshair';
+ if(d.type==='ln'){const isLn=d.b1>d.b0;if(d.tap&&!isLn){if(addNote(d.l,d.b0))AU.play('hit',.4)}else if(addNote(d.l,d.b0,isLn?d.b1:null))AU.play('hit',.4);else if(isLn)toast('다른 노트와 겹쳐서 놓을 수 없습니다')}
+ if(d.type==='sel'){const g=E.geo,xa=Math.min(d.x0,d.x1),xb=Math.max(d.x0,d.x1),sa=Math.min(d.s0,d.s1),sb=Math.max(d.s0,d.s1);
+  for(const n of E.song.notes){const cx=g.x0+(n.l+.5)*g.lw,st=b2s(n.b),et=n.e!=null?b2s(n.e):st;if(cx>=xa&&cx<=xb&&et>=sa&&st<=sb)E.sel.add(n)}
+  if(E.sel.size)toast(`${E.sel.size}개 선택 · Ctrl+C 복사 · Ctrl+V 붙여넣기 · Delete 삭제 · 끌어서 이동`)}
+ if(d.type==='move'){const moved=d.db||d.dl;let bad=!moved;if(moved){for(const n of d.orig.keys())if(n.l<0||n.l>3||b2s(n.b)<0||clash(n.l,n.b,n.e,d.orig)){bad=true;break}}
+  if(bad){for(const[n,o]of d.orig){n.b=o.b;n.l=o.l;if(o.e==null)delete n.e;else n.e=o.e}E.undo.pop();if(moved)toast('다른 노트와 겹치거나 범위를 벗어나서 옮길 수 없습니다')}
+  else{E.song.notes.sort((a,c)=>a.b-c.b||a.l-c.l);markDirty()}}};
 ec.addEventListener('pointerup',eUp);ec.addEventListener('pointercancel',eUp);ec.addEventListener('pointerleave',()=>{E.hover=null});ec.addEventListener('contextmenu',e=>e.preventDefault());
 ec.addEventListener('wheel',e=>{e.preventDefault();if(e.ctrlKey||e.metaKey){E.zoom=clamp(E.zoom*(e.deltaY<0?1.12:1/1.12),40,1600);const z=$('#cZoom');if(z)z.value=E.zoom;return}
  const step=BS.bms(E.song)/1000/E.div,n=Math.sign(e.deltaY)*Math.max(1,Math.round(Math.abs(e.deltaY)/90));seekEd((P.playing?E.t:b2s(snap(s2b(E.t))))-n*step)},{passive:false});
 function recDown(l){const s=E.song;AU.play('hit',.5);const sec=P.playing?E.t-SET.offset/1000:E.t;let b=s2b(sec);if(E.snapRec||!P.playing)b=snap(b);b=r6(b);
  const ex0=s.notes.find(n=>n.l===l&&Math.abs(n.b-b)<1e-4);if(ex0){if(!P.playing)delNote(ex0);return}const n=addNote(l,b);if(n&&P.playing)E.pend[l]={n,t:E.t}}
-function recUp(l){const p=E.pend[l];if(!p)return;E.pend[l]=null;if(E.t-p.t<.2)return;let eb=s2b(E.t-SET.offset/1000);if(E.snapRec)eb=snap(eb);eb=r6(eb);if(eb>p.n.b){p.n.e=eb;markDirty()}}
+function recUp(l){const p=E.pend[l];if(!p)return;E.pend[l]=null;if(E.t-p.t<.2)return;let eb=s2b(E.t-SET.offset/1000);if(E.snapRec)eb=snap(eb);eb=r6(eb);if(eb>p.n.b&&!clash(p.n.l,p.n.b,eb,new Set([p.n]))){p.n.e=eb;markDirty()}}
 
 /* ---------- panel tabs ---------- */
 $('#tabs').onclick=e=>{const b=e.target.closest('[data-t]');if(b)setTab(b.dataset.t)};
@@ -651,12 +669,14 @@ function setTab(t){E.tab=t;$$('#tabs button').forEach(b=>b.classList.toggle('on'
  <button id="cClear" class="ghost danger">이 난이도 노트 전체 지우기</button>
  <h4>사용법</h4>
  <ul class="help">
-  <li><b>노트</b> 모드: 빈칸 클릭 = 추가, 노트 클릭 = 삭제</li>
+  <li><b>노트</b> 모드: 빈칸 클릭 = 추가, <b>위로 끌면 롱노트</b>, 노트 클릭 = 삭제</li>
   <li><b>롱노트</b> 모드: 시작 지점에서 위로 끌어올리기</li>
+  <li><b>선택</b> 모드: 끌어서 여러 개 선택(Shift = 추가), 선택한 노트를 끌어서 이동 · <b>Ctrl+C / X / V</b> 복사·잘라내기·붙여넣기(빨간 선 위치) · <b>Delete</b> 삭제 · <b>Ctrl+A</b> 전체 선택</li>
   <li><b>우클릭</b> 또는 <b>지우개</b>: 노트 지우기 (드래그 가능)</li>
   <li><b>휠</b> = 스냅 단위 이동, <b>Ctrl+휠</b> = 확대/축소</li>
   <li><b>왼쪽 여백</b>을 끌거나 <b>이동</b> 모드로 스크롤 (터치 OK)</li>
-  <li><b>Space</b> 재생/정지 · <b>↑↓</b> 한 칸 이동 · <b>1–4</b> 모드</li>
+  <li><b>Space</b> 재생/정지 · <b>↑↓</b> 한 칸 이동</li>
+  <li>모드 단축키: <b>V</b>(1) 이동 · <b>Q</b>(2) 노트 · <b>W</b>(3) 롱노트 · <b>E</b>(4) 지우개 · <b>A</b>(5) 선택</li>
   <li>정지 상태에서 <b>${SET.keys.map(BS.keyName).join(' ')}</b> = 빨간 선 위치에 노트 토글</li>
   <li><b>● 녹음</b> 켜고 재생하면서 키 입력 → 실시간 채보 (길게 = 롱노트)</li>
   <li><b>Ctrl+Z / Ctrl+Y</b> 되돌리기 · <b>Ctrl+S</b> 저장</li>
@@ -725,14 +745,24 @@ addEventListener('keydown',e=>{if(BS.G.active||BS.modalOpen()||cur!=='editor')re
  if(typing)return;
  if(mod&&e.code==='KeyZ'){e.preventDefault();e.shiftKey?redo():undo();return}
  if(mod&&e.code==='KeyY'){e.preventDefault();redo();return}
+ if(mod&&e.code==='KeyA'){e.preventDefault();setMode('sel');E.song.notes.forEach(n=>E.sel.add(n));toast(`전체 ${E.sel.size}개 선택`);return}
+ if(mod&&(e.code==='KeyC'||e.code==='KeyX')){const L=E.song.notes.filter(n=>E.sel.has(n));if(!L.length){toast('먼저 선택 모드(A)로 노트를 끌어서 선택해 주십시오');return}e.preventDefault();
+  const b0=Math.min(...L.map(n=>n.b));E.clip=L.map(n=>({db:r6(n.b-b0),l:n.l,de:n.e!=null?r6(n.e-b0):null}));
+  if(e.code==='KeyX'){pushUndo();E.song.notes=E.song.notes.filter(n=>!E.sel.has(n));E.sel.clear();markDirty();toast(`${L.length}개 잘라냄`)}else toast(`${L.length}개 복사 · 붙여넣을 위치를 빨간 선에 맞추고 Ctrl+V`);return}
+ if(mod&&e.code==='KeyV'){if(!E.clip||!E.clip.length){toast('복사한 노트가 없습니다');return}e.preventDefault();const at=r6(snap(s2b(E.t)));if(b2s(at)<0){toast('첫 박 이전에는 붙여넣을 수 없습니다');return}
+  pushUndo();const added=[];let skip=0;for(const c of E.clip){const b=r6(at+c.db),en=c.de!=null?r6(at+c.de):null;if(clash(c.l,b,en)){skip++;continue}const n=en!=null?{b,l:c.l,e:en}:{b,l:c.l};E.song.notes.push(n);added.push(n)}
+  if(!added.length){E.undo.pop();toast('붙여넣을 자리에 이미 노트가 있습니다');return}E.song.notes.sort((a,c)=>a.b-c.b||a.l-c.l);setMode('sel');E.sel.clear();added.forEach(n=>E.sel.add(n));markDirty();toast(`${added.length}개 붙여넣음${skip?` (겹치는 ${skip}개 제외)`:''}`);return}
  if(mod)return;
+ if((e.code==='Delete'||e.code==='Backspace')&&E.sel.size){e.preventDefault();pushUndo();const k=E.sel.size;E.song.notes=E.song.notes.filter(n=>!E.sel.has(n));E.sel.clear();markDirty();toast(`${k}개 삭제`);return}
+ if(e.code==='Escape'&&E.sel.size){E.sel.clear();return}
+
  const l=SET.keys.indexOf(e.code);if(l>=0){e.preventDefault();if(!e.repeat){if(P.playing&&!E.rec){AU.play('hit',.4);const ps=$('#prevStage');if(ps)Stage.hop(ps,1,l);return}recDown(l)}return}
  if(e.code==='Space'){e.preventDefault();togglePlay();return}
  const step=BS.bms(E.song)/1000/E.div;
  if(e.code==='ArrowUp'){e.preventDefault();seekEd(b2s(snap(s2b(E.t)))+step);return}
  if(e.code==='ArrowDown'){e.preventDefault();seekEd(b2s(snap(s2b(E.t)))-step);return}
  if(e.code==='Home'){seekEd(0);return}
- const mm={Digit1:'pan',Digit2:'note',Digit3:'ln',Digit4:'erase'};if(mm[e.code])setMode(mm[e.code])});
+ const mm={Digit1:'pan',Digit2:'note',Digit3:'ln',Digit4:'erase',Digit5:'sel',KeyV:'pan',KeyQ:'note',KeyW:'ln',KeyE:'erase',KeyA:'sel'};if(mm[e.code])setMode(mm[e.code])});
 addEventListener('keyup',e=>{if(BS.G.active||cur!=='editor')return;const l=SET.keys.indexOf(e.code);if(l>=0)recUp(l)});
 addEventListener('resize',()=>{const ps=$('#prevStage');if(ps)Stage.size(ps)});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&cur==='editor'&&P.playing&&!BS.G.active){P.pause();E.t=P.base;updPlayBtn()}});
